@@ -19,7 +19,6 @@
     "sample-holdings": "tsx scripts/sample-holdings.ts"
   },
   "dependencies": {
-    "@google/genai": "^2.28.0",
     "@gsap/react": "^2.1.2",
     "@neondatabase/serverless": "^1.2.0",
     "drizzle-orm": "^0.45.4",

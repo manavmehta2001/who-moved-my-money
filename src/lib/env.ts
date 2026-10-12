@@ -3,10 +3,13 @@ import { z } from "zod";
 const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 const optionalString = z.preprocess(emptyToUndefined, z.string().min(1).optional());
 
+/** Gemini Flash on OpenRouter: the default per the course's OpenRouter brief. */
+export const DEFAULT_MODEL = "google/gemini-3.7-flash";
+
 const serverEnvSchema = z.object({
   DATABASE_URL: z.preprocess(emptyToUndefined, z.string({ error: "DATABASE_URL is missing (Neon pooled connection string)" }).startsWith("postgres", "DATABASE_URL must be a postgres:// connection string")),
-  GEMINI_API_KEY: z.preprocess(emptyToUndefined, z.string({ error: "GEMINI_API_KEY is missing" })),
-  GEMINI_MODEL: z.preprocess(emptyToUndefined, z.string().default("gemini-3.8-flash")),
+  OPENROUTER_API_KEY: z.preprocess(emptyToUndefined, z.string({ error: "OPENROUTER_API_KEY is missing" }).startsWith("sk-or-", "OPENROUTER_API_KEY should start with sk-or-")),
+  GEMINI_MODEL: z.preprocess(emptyToUndefined, z.string().startsWith("google/", "GEMINI_MODEL must be a Google model id like google/gemini-3.7-flash").default(DEFAULT_MODEL)),
   NEWSDATA_API_KEY: optionalString,
   GNEWS_API_KEY: optionalString,
   CRON_SECRET: z.preprocess(emptyToUndefined, z.string({ error: "CRON_SECRET is missing" }).min(16, "CRON_SECRET should be at least 16 characters")),
@@ -37,7 +40,7 @@ export function databaseUrl(): string {
 }
 
 export function geminiModel(): string {
-  return process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+  return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
 }
 
 export function validateEnvOnBoot(): void {

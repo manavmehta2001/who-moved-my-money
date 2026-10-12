@@ -1,4 +1,3 @@
-import { Type, type Schema } from "@google/genai";
 import { z } from "zod";
 import { VERDICTS } from "@/db/types";
 
@@ -20,31 +19,31 @@ export const reportOutputSchema = z.object({
 
 export type ReportOutput = z.infer<typeof reportOutputSchema>;
 
-/** The same shape for Gemini's `responseSchema` (OpenAPI subset). */
-export const geminiResponseSchema: Schema = {
-  type: Type.OBJECT,
+/** The same shape as JSON Schema, sent as OpenRouter's `response_format` (strict). */
+export const reportJsonSchema: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["headline", "funds", "verdict", "verdictReason", "jargonUsed"],
   properties: {
-    headline: { type: Type.STRING, description: "One line: the week in plain words." },
+    headline: { type: "string", description: "One line: the week in the style of a research-note title." },
     funds: {
-      type: Type.ARRAY,
+      type: "array",
       items: {
-        type: Type.OBJECT,
-        properties: {
-          schemeCode: { type: Type.STRING },
-          summary: {
-            type: Type.STRING,
-            description: "Exactly 3 sentences: (1) how it did, (2) vs the market and similar funds, (3) which provided headlines explain the gap, or that none clearly do.",
-          },
-          citedHeadlineIds: { type: Type.ARRAY, items: { type: Type.STRING } },
-        },
+        type: "object",
+        additionalProperties: false,
         required: ["schemeCode", "summary", "citedHeadlineIds"],
-        propertyOrdering: ["schemeCode", "summary", "citedHeadlineIds"],
+        properties: {
+          schemeCode: { type: "string" },
+          summary: {
+            type: "string",
+            description: "Exactly 3 sentences: (1) the return, (2) vs benchmark and category average, (3) the provided headlines that explain it, or that none do.",
+          },
+          citedHeadlineIds: { type: "array", items: { type: "string" } },
+        },
       },
     },
-    verdict: { type: Type.STRING, enum: [...VERDICTS] },
-    verdictReason: { type: Type.STRING, description: "Specific: names the fund(s) and the reason." },
-    jargonUsed: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Finance terms used anywhere above." },
+    verdict: { type: "string", enum: [...VERDICTS] },
+    verdictReason: { type: "string", description: "Specific: names the fund(s) and the reason." },
+    jargonUsed: { type: "array", items: { type: "string" }, description: "Finance terms used anywhere above." },
   },
-  required: ["headline", "funds", "verdict", "verdictReason", "jargonUsed"],
-  propertyOrdering: ["headline", "funds", "verdict", "verdictReason", "jargonUsed"],
 };

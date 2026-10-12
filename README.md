@@ -92,7 +92,7 @@ All thresholds live in [`src/config/verdict.ts`](src/config/verdict.ts) with com
 
 ## Gemini — the plain-language writer
 
-- **Model:** `GEMINI_MODEL`, default **`gemini-3.8-flash`** (the current stable Flash model on Google's model list when this was built), via the official `@google/genai` SDK with `responseMimeType: "application/json"` and a `responseSchema`. Low "thinking" level: writing from a fixed fact sheet needs little reasoning, and it keeps a report to about 6–12 seconds.
+- **Model and access:** `GEMINI_MODEL`, default **`google/gemini-3.7-flash`**, reached **only through the OpenRouter gateway** (the access the course provides; [`src/lib/gemini/openrouter.ts`](src/lib/gemini/openrouter.ts)). Every request is pinned to Google's own infrastructure with `provider: { only: ["google-vertex", "google-ai-studio"], allow_fallbacks: false }`, only `google/` model IDs are accepted, and the model is checked against OpenRouter's model list before use (`npm run verify`, `/status`). Output is strict JSON via `response_format: { type: "json_schema", strict: true }`; reasoning effort is low, since writing from a fixed fact sheet needs little reasoning. 429/5xx responses are retried with backoff up to 3 times; a 402 (out of credits) stops and falls back to the template. *This replaces the brief's original `@google/genai` SDK call: the model is still Gemini Flash, only the gateway changed.*
 - **Input:** a fact sheet of rounded numbers (2 decimals) per fund — this week, 1 month, YTD for the fund, the market and similar funds; the gaps; the three-way split and its biggest part; flags with reasons; the index moves; and the week's headlines with ids. The verdict is **given**; Gemini explains it and may not change it.
 - **Style rules (system instruction):** a professional research-note voice — neutral, precise, third person, correct terminology (benchmark, category average, relative performance, percentage points) with a brief plain explanation the first time a less common term appears; no casual phrasing or alarmist words; **no weather or nature words**; never "buy", "sell", "redeem" or "switch" — "warrants monitoring" or "may be worth discussing with an advisor" instead.
 
@@ -103,7 +103,7 @@ All thresholds live in [`src/config/verdict.ts`](src/config/verdict.ts) with com
 4. **Every percentage** in the prose is within **±0.05 pp** of a fact-sheet number — and a fund's summary may only use *that fund's* numbers (plus market moves and the verdict facts), so it can't borrow a near-miss number from another fund.
 5. Every cited headline id exists; no advice words; no weather words; no double negatives like "fell -0.18%".
 
-On failure: one retry with the specific errors fed back → otherwise the deterministic template report, marked **"Written without AI this week"**. Model, token counts, latency and retry count are stored with every report and shown on `/status`.
+On failure: one retry with the specific errors fed back → otherwise the deterministic template report, marked **"Written without AI this week"**. Model, token counts, latency and retry count are stored with every report and shown on `/status`; OpenRouter's reported cost is logged in `job_runs`.
 
 ## "Send to my CA"
 
@@ -128,7 +128,7 @@ All dates and schedules are in **Asia/Kolkata**. "This week" is the last NAV on 
 
 ## Setup
 
-Requirements: Node 20+ (built on Node 24), a free [Neon](https://neon.tech) Postgres database, a [Gemini API key](https://aistudio.google.com), optionally a [GNews](https://gnews.io) key.
+Requirements: Node 20+ (built on Node 24), a free [Neon](https://neon.tech) Postgres database, an [OpenRouter](https://openrouter.ai) API key (for Gemini), optionally a [GNews](https://gnews.io) key.
 
 ```bash
 git clone https://github.com/manavmehta2001/who-moved-my-money.git
@@ -147,8 +147,8 @@ npm run dev                     # http://localhost:3000
 | Variable | Required | What it is |
 |---|---|---|
 | `DATABASE_URL` | yes | Neon **pooled** connection string |
-| `GEMINI_API_KEY` | yes | Google AI Studio key |
-| `GEMINI_MODEL` | no | Defaults to `gemini-3.8-flash` |
+| `OPENROUTER_API_KEY` | yes | OpenRouter key (`sk-or-v1-…`); the only AI credential the app uses |
+| `GEMINI_MODEL` | no | A `google/` model on OpenRouter; defaults to `google/gemini-3.7-flash` |
 | `GNEWS_API_KEY` / `NEWSDATA_API_KEY` | no | One is enough; with neither, Google News RSS is used |
 | `CRON_SECRET` | yes | Long random string; Vercel sends it as `Authorization: Bearer …` to the cron routes |
 | `ADMIN_PASSCODE` | yes | Unlocks adding/removing funds and "Generate now" in the UI |

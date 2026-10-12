@@ -1,5 +1,4 @@
 import "./_env";
-import { GoogleGenAI } from "@google/genai";
 import { fetchScheme, searchSchemes, SchemeNotFoundError } from "@/lib/sources/mfapi";
 import { fetchNavAll, buildPeerGroups } from "@/lib/sources/amfi";
 import { fetchYahooDaily } from "@/lib/sources/yahoo";
@@ -8,6 +7,7 @@ import { configuredNewsProvider, fetchWeekHeadlines, googleNewsRssProvider } fro
 import { peerGroupFor, suggestBenchmark } from "@/lib/classify";
 import { addDays, todayIST } from "@/lib/dates";
 import { geminiModel } from "@/lib/env";
+import { chatJson, modelExists } from "@/lib/gemini/openrouter";
 import { SEED_FUNDS } from "./seedFunds";
 
 // Hits every external source the app depends on, prints a sample, and exits non-zero if a required one fails.
@@ -131,15 +131,26 @@ async function main() {
     return `${r.headlines.length} headlines via ${r.providerLabel}\n${r.headlines.slice(0, 4).map((h) => `${h.id}: ${h.title} — ${h.source}`).join("\n")}`;
   });
 
-  console.log("\nGemini");
-  if (process.env.GEMINI_API_KEY) {
-    await check(`Gemini ${geminiModel()}`, true, async () => {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const t = Date.now();
-      const res = await ai.models.generateContent({ model: geminiModel(), contents: "Reply with exactly the word OK." });
-      return `"${res.text?.trim()}" in ${Date.now() - t} ms · tokens in/out ${res.usageMetadata?.promptTokenCount}/${res.usageMetadata?.candidatesTokenCount}`;
+  console.log("\nGemini (via OpenRouter)");
+  if (process.env.OPENROUTER_API_KEY) {
+    await check(`OpenRouter lists ${geminiModel()}`, true, async () => {
+      if (!(await modelExists(geminiModel()))) throw new Error(`${geminiModel()} is missing; pick the closest google/ model`);
+      return "Model is listed";
     });
-  } else skip("Gemini", "GEMINI_API_KEY not set yet");
+    await check(`Gemini ${geminiModel()} (Google-served only)`, true, async () => {
+      const t = Date.now();
+      const r = await chatJson({
+        apiKey: process.env.OPENROUTER_API_KEY!,
+        model: geminiModel(),
+        system: "Answer in JSON.",
+        user: 'Reply with {"ok": true}.',
+        schemaName: "ping",
+        schema: { type: "object", additionalProperties: false, required: ["ok"], properties: { ok: { type: "boolean" } } },
+        maxTokens: 512,
+      });
+      return `${r.text.trim()} in ${Date.now() - t} ms · provider ${r.provider} · tokens ${r.tokensIn}/${r.tokensOut} · cost ${r.cost}`;
+    });
+  } else skip("Gemini via OpenRouter", "OPENROUTER_API_KEY not set");
 
   console.log("\nDatabase");
   if (process.env.DATABASE_URL) {

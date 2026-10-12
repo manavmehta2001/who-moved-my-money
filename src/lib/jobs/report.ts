@@ -64,7 +64,7 @@ export async function generateReport(ctx: JobContext, weekEnding: IsoDate, opts:
     headlines: mc.headlines,
   });
 
-  const written = await writeReport(sheet, { apiKey: process.env.GEMINI_API_KEY || undefined });
+  const written = await writeReport(sheet, { apiKey: process.env.OPENROUTER_API_KEY || undefined });
   if (written.writtenBy === "template") ctx.warn(`Report written without AI this week: ${written.content.guardErrors?.slice(0, 3).join(" | ")}`);
 
   const values = {
@@ -102,6 +102,6 @@ export async function generateReport(ctx: JobContext, weekEnding: IsoDate, opts:
     })
     .returning();
 
-  ctx.details.report = { weekEnding, verdict: verdict.verdict, writtenBy: written.writtenBy, model: written.model, retries: written.retries, tokensIn: written.tokensIn, tokensOut: written.tokensOut, latencyMs: written.latencyMs };
+  ctx.details.report = { weekEnding, verdict: verdict.verdict, writtenBy: written.writtenBy, model: written.model, retries: written.retries, tokensIn: written.tokensIn, tokensOut: written.tokensOut, latencyMs: written.latencyMs, costCredits: written.cost };
   return { report, sheet, written, verdict };
 }

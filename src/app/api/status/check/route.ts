@@ -1,8 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
 import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { clientIp, json, rateLimit, tooMany } from "@/lib/api";
 import { geminiModel } from "@/lib/env";
+import { modelExists, OPENROUTER_BASE } from "@/lib/gemini/openrouter";
 import { amfiSnapshot } from "@/lib/funds/lookup";
 import { fetchScheme } from "@/lib/sources/mfapi";
 import { fetchYahooDaily } from "@/lib/sources/yahoo";
@@ -53,10 +53,15 @@ export async function GET(request: Request) {
       return `${items.length} articles this week`;
     }),
     timed("Google News RSS (news fallback)", async () => `${(await googleNewsRssProvider.fetch(weekAgo.toISOString(), now.toISOString())).length} articles`),
-    timed(`Gemini (${geminiModel()})`, async () => {
-      if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
-      const m = await new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }).models.get({ model: geminiModel() });
-      return `Model available: ${m.displayName ?? m.name}`;
+    timed(`Gemini via OpenRouter (${geminiModel()})`, async () => {
+      const key = process.env.OPENROUTER_API_KEY;
+      if (!key) throw new Error("OPENROUTER_API_KEY not set");
+      if (!(await modelExists(geminiModel()))) throw new Error(`${geminiModel()} is no longer listed on OpenRouter`);
+      const res = await fetch(`${OPENROUTER_BASE}/key`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) throw new Error(`Key check failed (HTTP ${res.status})`);
+      const k = ((await res.json()) as { data?: { limit_remaining?: number | null } }).data;
+      const left = typeof k?.limit_remaining === "number" ? ` · ${k.limit_remaining.toFixed(2)} credits left` : "";
+      return `Model listed, key valid${left} · Google-served only`;
     }),
   ]);
   return json({ checkedAt: now.toISOString(), checks });

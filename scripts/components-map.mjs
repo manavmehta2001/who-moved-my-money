@@ -19,7 +19,7 @@ const LANES = [
   { name: "Meera", sub: ["(Investor)"], bg: "#eef0fd" },
   { name: "Scheduler", sub: ["(Vercel Cron)"], bg: "#fdf0eb" },
   { name: "System", sub: ["(Next.js + Neon)"], bg: "#fef9e7" },
-  { name: "AI Model", sub: ["(Gemini Flash)"], bg: "#e9f7ef" },
+  { name: "AI Model", sub: ["(Gemini Flash", "via OpenRouter)"], bg: "#e9f7ef" },
   { name: "Services", sub: ["(mfapi, AMFI, Yahoo,", "GNews, WhatsApp)"], bg: "#fcedf2" },
   { name: "Dashboard", sub: ["(Meera + CA friend)"], bg: "#ebf2fd" },
 ];
@@ -44,7 +44,7 @@ const BOXES = [
   ["sProc", 2, 3, "yellow", ["Engine (no AI): returns,", "category avg, market →", "category → fund split,", "verdict + worry score"]],
   ["guard", 2, 4, "yellow", ["Guard: 3 sentences,", "every % within ±0.05 pp,", "same verdict → retry", "once, else template"]],
   ["sOut", 2, 5, "yellow", ["Saves report + model,", "tokens, retries and", "job_runs in Neon"]],
-  ["gem", 3, 4, "green", ["Gemini writes the", "analyst note from a", "rounded fact sheet", "(JSON schema)"]],
+  ["gem", 3, 4, "green", ["Gemini 3.7 Flash via", "OpenRouter (Google-", "served) writes the", "analyst note (JSON)"]],
   ["svcIn", 4, 1, "pink", ["mfapi + AMFI NAVs,", "Yahoo index levels,", "GNews + RSS headlines"]],
   ["svcOut", 4, 5, "pink", ["Vercel serves the app;", "“Send to my CA” opens", "a WhatsApp summary"]],
   ["dash", 5, 5, "red", ["Dashboard: value,", "holdings, verdict,", "allocation, fund sheets"]],

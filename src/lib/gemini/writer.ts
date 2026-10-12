@@ -1,10 +1,10 @@
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { geminiModel } from "@/lib/env";
 import type { ReportContent } from "@/db/types";
 import type { FactSheet } from "./factSheet";
 import { checkReport } from "./hallucinationGuard";
 import { retryPrompt, SYSTEM_INSTRUCTION, userPrompt } from "./prompt";
-import { geminiResponseSchema, type ReportOutput } from "./schema";
+import { reportJsonSchema, type ReportOutput } from "./schema";
+import { chatJson, OutOfCreditsError } from "./openrouter";
 import { templateReport } from "./templateFallback";
 
 export type WrittenReport = {
@@ -15,33 +15,18 @@ export type WrittenReport = {
   tokensOut: number;
   latencyMs: number;
   retries: number;
+  /** OpenRouter credits charged across attempts. */
+  cost: number;
   attempts: Array<{ ok: boolean; errors: string[] }>;
 };
 
-export type GenerateFn = (prompt: string) => Promise<{ text: string; tokensIn: number; tokensOut: number }>;
+export type GenerateFn = (prompt: string) => Promise<{ text: string; tokensIn: number; tokensOut: number; cost?: number }>;
 
-export function geminiGenerate(apiKey: string, model: string): GenerateFn {
-  const ai = new GoogleGenAI({ apiKey });
+/** Gemini Flash via OpenRouter, Google infrastructure only, strict JSON schema. */
+export function openRouterGenerate(apiKey: string, model: string): GenerateFn {
   return async (prompt) => {
-    const res = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: geminiResponseSchema,
-        maxOutputTokens: 8192,
-        // Writing from a fixed fact sheet needs little reasoning; low thinking keeps the report fast and cheap.
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        abortSignal: AbortSignal.timeout(90_000),
-      },
-    });
-    const u = res.usageMetadata;
-    return {
-      text: res.text ?? "",
-      tokensIn: u?.promptTokenCount ?? 0,
-      tokensOut: (u?.candidatesTokenCount ?? 0) + (u?.thoughtsTokenCount ?? 0),
-    };
+    const r = await chatJson({ apiKey, model, system: SYSTEM_INSTRUCTION, user: prompt, schemaName: "weekly_report", schema: reportJsonSchema });
+    return { text: r.text, tokensIn: r.tokensIn, tokensOut: r.tokensOut, cost: r.cost };
   };
 }
 
@@ -55,11 +40,12 @@ function toContent(out: ReportOutput, guardErrors?: string[]): ReportContent {
  */
 export async function writeReport(sheet: FactSheet, opts: { apiKey?: string; model?: string; generate?: GenerateFn } = {}): Promise<WrittenReport> {
   const model = opts.model ?? geminiModel();
-  const generate = opts.generate ?? (opts.apiKey ? geminiGenerate(opts.apiKey, model) : null);
+  const generate = opts.generate ?? (opts.apiKey ? openRouterGenerate(opts.apiKey, model) : null);
   const attempts: WrittenReport["attempts"] = [];
   let tokensIn = 0;
   let tokensOut = 0;
   let latencyMs = 0;
+  let cost = 0;
 
   if (generate) {
     let errors: string[] = [];
@@ -70,11 +56,14 @@ export async function writeReport(sheet: FactSheet, opts: { apiKey?: string; mod
         const res = await generate(attempt === 0 ? userPrompt(sheet) : retryPrompt(sheet, errors));
         tokensIn += res.tokensIn;
         tokensOut += res.tokensOut;
+        cost += res.cost ?? 0;
         text = res.text;
       } catch (e) {
         latencyMs += Date.now() - started;
         errors = [`Gemini call failed: ${e instanceof Error ? e.message : String(e)}`];
         attempts.push({ ok: false, errors });
+        // Out of credits won't fix itself on a retry: go straight to the template.
+        if (e instanceof OutOfCreditsError) break;
         continue;
       }
       latencyMs += Date.now() - started;
@@ -87,7 +76,7 @@ export async function writeReport(sheet: FactSheet, opts: { apiKey?: string; mod
       const check = raw === null ? { ok: false as const, output: null, errors: ["The answer was not valid JSON."] } : checkReport(raw, sheet);
       attempts.push({ ok: check.ok, errors: check.errors });
       if (check.ok) {
-        return { content: toContent(check.output), writtenBy: "gemini", model, tokensIn, tokensOut, latencyMs, retries: attempt, attempts };
+        return { content: toContent(check.output), writtenBy: "gemini", model, tokensIn, tokensOut, latencyMs, retries: attempt, cost, attempts };
       }
       errors = check.errors;
     }
@@ -96,13 +85,14 @@ export async function writeReport(sheet: FactSheet, opts: { apiKey?: string; mod
   const fallback = templateReport(sheet);
   const guardErrors = attempts.flatMap((a) => a.errors);
   return {
-    content: toContent(fallback, generate ? guardErrors : ["No GEMINI_API_KEY configured."]),
+    content: toContent(fallback, generate ? guardErrors : ["No OPENROUTER_API_KEY configured."]),
     writtenBy: "template",
     model: generate ? model : null,
     tokensIn,
     tokensOut,
     latencyMs,
     retries: Math.max(0, attempts.length - 1),
+    cost,
     attempts,
   };
 }
