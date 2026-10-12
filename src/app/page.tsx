@@ -1,69 +1,124 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import Link from "next/link";
+import { getCheckinView, type CheckinView } from "@/lib/data/views";
+import { isAdmin } from "@/lib/auth/passcode";
+import { formatDisplayDate } from "@/lib/dates";
+import { shareText } from "@/lib/share";
+import { GlossaryText } from "@/components/glossary/Glossary";
+import { GenerateNow } from "@/components/admin/GenerateNow";
+import { CheckinMotion } from "@/components/checkin/CheckinMotion";
+import { FundSection } from "@/components/checkin/FundSection";
+import { MarketStrip } from "@/components/checkin/MarketStrip";
+import { ShareButtons } from "@/components/checkin/ShareButtons";
+import { WorryDial } from "@/components/checkin/WorryDial";
 
-export default function Home() {
+export default function CheckinPage(props: PageProps<"/">) {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <Suspense fallback={<p className="muted">Opening this Saturday&rsquo;s check-in…</p>}>
+      <Checkin searchParams={props.searchParams} />
+    </Suspense>
+  );
+}
+
+function VerdictSentence({ view }: { view: CheckinView }) {
+  const v = view.report.verdict;
+  const watched = view.funds.filter((f) => f.flagged).map((f) => f.shortName);
+  return (
+    <h1 className="verdict-sentence" data-anim="verdict">
+      {v === "One fund worth watching" ? (
+        <>
+          <span className="verdict-phrase">{v}</span>
+          {watched[0] ? `: ${watched[0]}.` : "."}
+        </>
+      ) : v === "No action needed" ? (
+        <>
+          <span className="verdict-phrase">{v}</span> this week.
+        </>
+      ) : (
+        <>
+          <span className="verdict-phrase">{v}</span> this week.
+        </>
+      )}
+    </h1>
+  );
+}
+
+async function Checkin({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
+  const { week } = await searchParams;
+  const [view, admin] = await Promise.all([getCheckinView(typeof week === "string" ? week : undefined), isAdmin()]);
+
+  if (!view) {
+    return (
+      <section className="empty" aria-labelledby="empty-title">
+        <h1 id="empty-title" className="page-title">
+          Your first check-in arrives Saturday morning.
+        </h1>
+        <p className="lede">Every Saturday at about 7 AM this page explains who moved your money: the market, funds like yours, or your fund itself. Can&rsquo;t wait?</p>
+        <GenerateNow isAdmin={admin} label="Generate it now" />
+      </section>
+    );
+  }
+
+  const r = view.report;
+  const cited = new Set(view.funds.flatMap((f) => f.citedHeadlineIds));
+
+  return (
+    <CheckinMotion state={view.state} week={r.weekEnding}>
+      <section className="hero" aria-labelledby="verdict">
+        <div>
+          <p className="hero-week">
+            Week ending Friday {formatDisplayDate(r.weekEnding)}
+            {!view.isLatest && (
+              <>
+                {" · "}
+                <Link href="/">See the latest week</Link>
+              </>
+            )}
+          </p>
+          <div id="verdict">
+            <VerdictSentence view={view} />
+          </div>
+          <p className="hero-headline">{r.content.headline}</p>
+          <p className="hero-reason">
+            <GlossaryText text={r.verdictReason} extraTerms={r.content.jargonUsed} skip={view.funds.map((f) => f.shortName)} />
+          </p>
+          <p style={{ marginTop: "var(--space-3)", display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+            {r.writtenBy === "gemini" ? <span className="badge">Written by Gemini from checked numbers</span> : <span className="badge">Written without AI this week</span>}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <WorryDial score={r.worryScore} />
+      </section>
+
+      {view.removedSince.length > 0 && (
+        <p className="alert info" style={{ marginTop: "var(--space-4)" }}>
+          Since this report, you removed {view.removedSince.join(", ")}. It won&rsquo;t appear in future check-ins.
+        </p>
+      )}
+
+      <div className="funds">
+        {view.funds.map((f, i) => (
+          <FundSection key={f.schemeCode} f={f} jargon={r.content.jargonUsed} index={i} />
+        ))}
+      </div>
+
+      <MarketStrip moves={view.indexMoves} headlines={view.headlines} cited={cited} provider={view.newsProvider} />
+
+      <section aria-labelledby="share-title" style={{ marginTop: "var(--space-6)" }}>
+        <h2 id="share-title" style={{ fontSize: "var(--step-1)" }}>
+          Ask my CA friend
+        </h2>
+        <p className="muted prose">Instead of screenshotting NAVs, send this week&rsquo;s summary in one tap.</p>
+        <ShareButtons text={shareText(view, process.env.NEXT_PUBLIC_APP_URL)} />
+      </section>
+
+      {view.isLatest && (
+        <section aria-label="Refresh this report" style={{ marginTop: "var(--space-6)" }}>
+          <p className="faint" style={{ marginBottom: "var(--space-2)" }}>
+            Generated {r.generatedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST.
+          </p>
+          <GenerateNow isAdmin={admin} label="Regenerate this week's report" quiet />
+        </section>
+      )}
+    </CheckinMotion>
   );
 }

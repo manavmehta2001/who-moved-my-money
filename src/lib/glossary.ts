@@ -1,4 +1,7 @@
-/** One-sentence plain explanations, shown when a dotted-underlined term is tapped. */
+/**
+ * One-sentence plain explanations, shown when a dotted-underlined term is tapped. Only hyphenated "mid-cap" forms
+ * are listed so fund names like "HDFC Mid Cap Fund" don't get underlined mid-name.
+ */
 export const GLOSSARY: Record<string, string> = {
   NAV: "Net asset value: the price of one unit of a mutual fund, worked out once a day after markets close.",
   benchmark: "The market index a fund is measured against, like the Nifty 50 for large companies.",
@@ -21,11 +24,8 @@ export const GLOSSARY: Record<string, string> = {
   FPI: "Foreign portfolio investors: overseas investors holding Indian shares and bonds.",
   "fund of funds": "A fund that invests in other funds, often ones abroad.",
   "mid-cap": "Mid-sized companies, ranked 101st to 250th in India by market value.",
-  "mid cap": "Mid-sized companies, ranked 101st to 250th in India by market value.",
   "small-cap": "Smaller companies, ranked 251st and below in India by market value.",
-  "small cap": "Smaller companies, ranked 251st and below in India by market value.",
   "large-cap": "India's 100 biggest companies by market value.",
-  "large cap": "India's 100 biggest companies by market value.",
   "expense ratio": "The yearly fee a fund charges, taken out of its NAV a little each day.",
   "total return index": "An index that assumes dividends are reinvested, which is the fair way to compare a growth fund.",
   SIP: "A systematic investment plan: a fixed amount invested automatically every month.",
