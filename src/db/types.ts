@@ -19,7 +19,7 @@ export type BenchmarkProvenance = {
 };
 
 export type Provenance = {
-  navSource: "mfapi" | "amfi";
+  navSource: string;
   navAsOf: string;
   benchmark: BenchmarkProvenance | null;
   benchmarkNote: string | null;

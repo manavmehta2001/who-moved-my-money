@@ -12,6 +12,7 @@ import {
   syncBenchmarkDefs,
   syncBenchmarkHistory,
 } from "./ingest";
+import { computeSnapshots } from "./snapshots";
 
 export type BackfillResult = {
   weekEnding: string;
@@ -19,6 +20,7 @@ export type BackfillResult = {
   benchmarks: Record<string, number>;
   peerGroups: Record<string, number>;
   peers: { fetched: number; skipped: number; failed: number; remaining: number };
+  snapshotRows: number;
   done: boolean;
 };
 
@@ -47,5 +49,8 @@ export async function runDataBackfill(ctx: JobContext, opts: { deadline?: number
   const peers = await backfillPeerHistory(ctx, peerCodes, peerHistoryCutoff(weekEnding), { deadline: opts.deadline });
 
   Object.assign(ctx.details, { weekEnding, funds: fundsOut, peerGroups, peers });
-  return { weekEnding, funds: fundsOut, benchmarks: benchmarksOut, peerGroups, peers, done: peers.remaining === 0 };
+  const done = peers.remaining === 0;
+  // Snapshots only once every peer has history, otherwise early weeks would use a thinner peer set.
+  const snapshotRows = done ? (await computeSnapshots(ctx, weekEnding, { funds: targets })).rows.length : 0;
+  return { weekEnding, funds: fundsOut, benchmarks: benchmarksOut, peerGroups, peers, snapshotRows, done };
 }

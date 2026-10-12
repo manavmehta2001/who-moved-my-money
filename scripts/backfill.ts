@@ -10,6 +10,7 @@ async function main() {
   console.log("Benchmarks (rows):", result.benchmarks);
   console.log("Peer groups (members):", result.peerGroups);
   console.log("Peer histories:", result.peers);
+  console.log("Weekly snapshots written:", result.snapshotRows);
   const warnings = (details.warnings as string[] | undefined) ?? [];
   for (const w of warnings) console.warn(`! ${w}`);
   console.log(`\n${status.toUpperCase()} in ${((Date.now() - started) / 1000).toFixed(1)}s`);
