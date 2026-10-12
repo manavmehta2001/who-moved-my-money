@@ -27,8 +27,8 @@ function VerdictSentence({ view }: { view: CheckinView }) {
     <h1 className="verdict-sentence" data-anim="verdict">
       {v === "One fund worth watching" ? (
         <>
-          <span className="verdict-phrase">{v}</span>
-          {watched[0] ? `: ${watched[0]}.` : "."}
+          <span className="verdict-phrase">{watched[0] ? `${v}:` : `${v}.`}</span>
+          {watched[0] ? ` ${watched[0]}.` : ""}
         </>
       ) : v === "No action needed" ? (
         <>
