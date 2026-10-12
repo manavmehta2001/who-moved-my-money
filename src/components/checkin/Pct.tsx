@@ -19,14 +19,16 @@ export function Pct({ value, title, className = "", countUp = false, digits = 2 
   );
 }
 
-/** Percentage-point gap: "0.25 pp ahead" / "1.10 pp behind". */
+/** Percentage-point gap: "▲ 0.25 pp" / "▼ 1.10 pp", with "ahead"/"behind" for screen readers. */
 export function Gap({ value, title }: { value: number | null; title?: string }) {
   if (value === null) return <span className="num flat">—</span>;
   const shown = (Math.abs(value) * 100).toFixed(2);
   if (Number(shown) === 0) return <span className="num flat" title={title}>level</span>;
+  const ahead = value > 0;
   return (
-    <span className={`num ${value > 0 ? "up" : "down"}`} title={title}>
-      {shown} pp {value > 0 ? "ahead" : "behind"}
+    <span className={`num ${ahead ? "up" : "down"}`} title={title ?? `${shown} percentage points ${ahead ? "ahead of" : "behind"} similar funds`}>
+      <span aria-hidden="true">{ahead ? "▲ " : "▼ "}</span>
+      {shown} pp<span className="sr-only"> {ahead ? "ahead" : "behind"}</span>
     </span>
   );
 }

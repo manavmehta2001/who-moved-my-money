@@ -673,7 +673,7 @@ table.returns thead th {
 
 table.returns tbody th {
   font-weight: 400;
-  white-space: nowrap;
+  min-width: 4.5rem;
 }
 
 @media (max-width: 420px) {
@@ -686,9 +686,6 @@ table.returns tbody th {
 @media (max-width: 360px) {
   table.returns {
     font-size: 0.78rem;
-  }
-  table.returns tbody th {
-    white-space: normal;
   }
 }
 
