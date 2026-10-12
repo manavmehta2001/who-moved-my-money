@@ -22,6 +22,8 @@ export function GlossaryProvider({ children }: { children: ReactNode }) {
     const d = dialogRef.current;
     if (!d) return;
     if (!d.open) {
+      gsap.killTweensOf(d);
+      gsap.set(d, { xPercent: 0 });
       d.showModal();
       if (window.matchMedia(MOTION_OK).matches) gsap.fromTo(d, { xPercent: 100 }, { xPercent: 0, duration: 0.35, ease: "power3.out" });
     }
@@ -30,9 +32,23 @@ export function GlossaryProvider({ children }: { children: ReactNode }) {
 
   const close = () => {
     const d = dialogRef.current;
+    if (!d?.open) return;
+    gsap.killTweensOf(d);
+    if (!window.matchMedia(MOTION_OK).matches) return d.close();
+    const done = () => {
+      if (d.open) d.close();
+    };
+    gsap.to(d, { xPercent: 100, duration: 0.25, ease: "power2.in", onComplete: done });
+    // Background tabs can pause animation frames; the drawer must still close.
+    window.setTimeout(done, 400);
+  };
+
+  // However the dialog closed (button, backdrop, Escape, or the browser itself), leave it ready to open cleanly.
+  const onClosed = () => {
+    const d = dialogRef.current;
     if (!d) return;
-    if (window.matchMedia(MOTION_OK).matches) gsap.to(d, { xPercent: 100, duration: 0.25, ease: "power2.in", onComplete: () => d.close() });
-    else d.close();
+    gsap.killTweensOf(d);
+    gsap.set(d, { xPercent: 0 });
   };
 
   const terms = Object.entries(GLOSSARY).filter(([k], i, all) => all.findIndex(([, v]) => v === GLOSSARY[k]) === i);
@@ -45,9 +61,12 @@ export function GlossaryProvider({ children }: { children: ReactNode }) {
         className="glossary"
         aria-labelledby="glossary-title"
         onCancel={(e) => {
+          // Chrome only lets a page delay Escape-to-close after a user gesture; otherwise it closes natively.
+          if (!e.cancelable) return;
           e.preventDefault();
           close();
         }}
+        onClose={onClosed}
         onClick={(e) => {
           if (e.target === dialogRef.current) close();
         }}

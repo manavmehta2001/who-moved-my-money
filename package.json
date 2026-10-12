@@ -14,7 +14,8 @@
     "backfill": "tsx scripts/backfill.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "report": "tsx scripts/report.ts"
+    "report": "tsx scripts/report.ts",
+    "e2e": "tsx scripts/e2e.ts"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",

@@ -206,6 +206,12 @@ npm run typecheck
 npm run lint
 npm run verify       # live check of every external source
 npm run report       # (re)generate this week's report from the command line
+npm run e2e -- https://who-moved-my-money.vercel.app
+                     # end-to-end against a live deployment (44 checks): auth on every protected route, pages,
+                     # lookup errors, add a fund → backfilled → in the report → re-run the Saturday job (no
+                     # duplicates) → remove → out of the report with history kept, the stored report re-checked by
+                     # the hallucination guard, the split summing exactly in every snapshot, all sources healthy.
+                     # Leaves the portfolio as it found it.
 ```
 
 ## Acceptance checklist
