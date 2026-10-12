@@ -19,12 +19,17 @@ export const VERDICT_CONFIG = {
   },
   debt: {
     /**
-     * A short-duration debt fund almost never falls 0.3% in a week; when it does it can signal a credit event
-     * (a bond it holds being downgraded). Unlike equity lag, this is an absolute loss, so one week is enough.
+     * A short-duration debt fund rarely falls 0.3% in a week; when it does on its own it can signal a credit event
+     * (a bond it holds being downgraded). But when rates rise every debt fund dips together — that's the market,
+     * not the fund — so the fall must also be clearly worse than similar funds (by more than 0.2 pp).
+     * This is an absolute loss rather than relative lag, so one week is enough. If similar-fund data is
+     * missing, the absolute thresholds apply on their own, so nothing goes unchecked.
      */
     weeklyDrop: -0.003,
-    /** Any negative 1-month return is unusual for short-duration debt. */
+    weeklyGapVsCategory: -0.002,
+    /** A negative month counts only if the fund is also more than 0.25 pp behind similar funds over that month. */
     oneMonthNegative: 0,
+    oneMonthGapVsCategory: -0.0025,
   },
   allocation: {
     /** Current value weight vs SIP-implied target weight; more than 10 pp apart on any fund triggers a review. */

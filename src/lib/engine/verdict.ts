@@ -15,6 +15,7 @@ export type WeekFacts = {
   fundRet1w: number | null;
   fundRet1m: number | null;
   fundRetYtd: number | null;
+  catRet1w: number | null;
   catRet1m: number | null;
   catRetYtd: number | null;
   fundChoices1w: number | null;
@@ -32,11 +33,31 @@ export function fundFlags(assetClass: AssetClass, history: WeekFacts[]): FundFla
 
   if (assetClass === "debt") {
     const c = VERDICT_CONFIG.debt;
-    if (latest.fundRet1w !== null && latest.fundRet1w < c.weeklyDrop) {
-      flags.push({ code: "debt_weekly_drop", reason: `It fell ${pct(latest.fundRet1w)} this week, which is unusual for a short-duration debt fund and can mean trouble with a bond it holds.` });
+    const w = latest.fundRet1w;
+    if (w !== null && w < c.weeklyDrop) {
+      const gap = latest.catRet1w !== null ? w - latest.catRet1w : null;
+      if (gap === null || gap < c.weeklyGapVsCategory) {
+        flags.push({
+          code: "debt_weekly_drop",
+          reason:
+            gap === null
+              ? `It fell ${pct(w)} this week, which is unusual for a short-duration debt fund and can mean trouble with a bond it holds.`
+              : `It fell ${pct(w)} this week, ${pp(gap)} more than similar debt funds, which can mean trouble with a bond it holds.`,
+        });
+      }
     }
-    if (latest.fundRet1m !== null && latest.fundRet1m < c.oneMonthNegative) {
-      flags.push({ code: "debt_monthly_negative", reason: `It is down ${pct(latest.fundRet1m)} over the past month; funds like this normally edge up steadily.` });
+    const m = latest.fundRet1m;
+    if (m !== null && m < c.oneMonthNegative) {
+      const gap = latest.catRet1m !== null ? m - latest.catRet1m : null;
+      if (gap === null || gap < c.oneMonthGapVsCategory) {
+        flags.push({
+          code: "debt_monthly_negative",
+          reason:
+            gap === null
+              ? `It is down ${pct(m)} over the past month; funds like this normally edge up steadily.`
+              : `It is down ${pct(m)} over the past month, ${pp(gap)} worse than similar debt funds.`,
+        });
+      }
     }
     return flags;
   }

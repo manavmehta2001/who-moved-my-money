@@ -164,6 +164,7 @@ const week = (i: number, over: Partial<WeekFacts> = {}): WeekFacts => ({
   fundRet1w: 0.005,
   fundRet1m: 0.01,
   fundRetYtd: 0.08,
+  catRet1w: 0.005,
   catRet1m: 0.01,
   catRetYtd: 0.08,
   fundChoices1w: 0.001,
@@ -212,12 +213,26 @@ describe("fundFlags — equity", () => {
 });
 
 describe("fundFlags — debt", () => {
-  it("flags a weekly fall below −0.3% (possible credit event)", () => {
-    expect(fundFlags("debt", [week(0, { fundRet1w: -0.004, fundRet1m: 0.002 })]).map((f) => f.code)).toEqual(["debt_weekly_drop"]);
+  it("flags a weekly fall below −0.3% that is clearly worse than similar funds (possible credit event)", () => {
+    const flags = fundFlags("debt", [week(0, { fundRet1w: -0.004, catRet1w: 0.0005, fundRet1m: 0.002, catRet1m: 0.003 })]);
+    expect(flags.map((f) => f.code)).toEqual(["debt_weekly_drop"]);
+    expect(flags[0].reason).toContain("0.45 percentage points more than similar debt funds");
   });
-  it("flags a negative month", () => {
-    expect(fundFlags("debt", [week(0, { fundRet1w: 0.0005, fundRet1m: -0.001 })]).map((f) => f.code)).toEqual(["debt_monthly_negative"]);
+
+  it("does not flag a fall that all similar funds share (e.g. after a rate hike)", () => {
+    expect(fundFlags("debt", [week(0, { fundRet1w: -0.004, catRet1w: -0.0035, fundRet1m: -0.0019, catRet1m: -0.001 })])).toEqual([]);
   });
+
+  it("flags a negative month only when more than 0.25 pp behind similar funds", () => {
+    expect(fundFlags("debt", [week(0, { fundRet1w: 0.0005, fundRet1m: -0.004, catRet1m: 0.001 })]).map((f) => f.code)).toEqual(["debt_monthly_negative"]);
+    expect(fundFlags("debt", [week(0, { fundRet1w: 0.0005, fundRet1m: -0.001, catRet1m: 0.001 })])).toEqual([]);
+  });
+
+  it("falls back to the absolute rules when similar-fund data is missing", () => {
+    const flags = fundFlags("debt", [week(0, { fundRet1w: -0.004, catRet1w: null, fundRet1m: -0.001, catRet1m: null })]);
+    expect(flags.map((f) => f.code)).toEqual(["debt_weekly_drop", "debt_monthly_negative"]);
+  });
+
   it("is calm for normal debt behaviour", () => {
     expect(fundFlags("debt", [week(0, { fundRet1w: 0.0012, fundRet1m: 0.006 })])).toEqual([]);
   });

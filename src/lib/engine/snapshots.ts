@@ -145,6 +145,7 @@ export function toWeekFacts(r: SnapshotRow): WeekFacts {
     fundRet1w: r.fundRet1w,
     fundRet1m: r.fundRet1m,
     fundRetYtd: r.fundRetYtd,
+    catRet1w: r.catRet1w,
     catRet1m: r.catRet1m,
     catRetYtd: r.catRetYtd,
     fundChoices1w: r.fundChoices1w,
