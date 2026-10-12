@@ -1,67 +1,73 @@
 /*
  * Every colour, size and timing in the app lives here. Restyle by editing this file only.
- * Fintech dashboard palette (light + dark). Text colours are checked against WCAG AA on their surfaces;
- * gain/loss "ink" variants are the text-safe versions of the chart colours.
+ * Investing-app palette: white canvas, navy hero, green primary, red/green market colours.
+ * Text colours are checked against WCAG AA on their surfaces.
  */
 
 :root {
   color-scheme: light;
 
   /* Surfaces */
-  --bg: #f3f5f9;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f7f8fb;
-  --surface-sunk: #eceff4;
-  --rule: #e2e6ee;
-  --rule-strong: #cfd5df;
-  --overlay: rgb(10 15 25 / 0.45);
-  --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 2px 8px rgb(16 24 40 / 0.05);
+  --surface-2: #f6f7f9;
+  --surface-sunk: #eff1f4;
+  --rule: #e6e9ee;
+  --rule-strong: #d3d8df;
+  --overlay: rgb(15 20 35 / 0.45);
+  --shadow: none;
   --shadow-lg: -16px 0 48px rgb(16 24 40 / 0.18);
 
   /* Ink */
-  --ink: #101828;
-  --ink-soft: #475467;
-  --ink-faint: #5d6b7e;
+  --ink: #1b1f27;
+  --ink-soft: #4b5563;
+  --ink-faint: #5f6977;
 
-  /* Brand */
-  --brand: #2c4bdc;
-  --brand-ink: #2443cf;
-  --brand-tint: #e9edfd;
+  /* Brand: navy hero + green primary */
+  --navy: #21305e;
+  --navy-2: #2b3b70;
+  --on-navy: #ffffff;
+  --on-navy-soft: #c9d2ec;
+  --brand: #0f9d58;
+  --brand-btn: #0b8048;
+  --on-brand: #ffffff;
+  --brand-ink: #0b7a44;
+  --brand-tint: #e6f5ec;
+  --pill: #f1f3f5;
 
   /* Gains & losses (always paired with ▲/▼ and words) */
-  --gain: #079455;
-  --gain-ink: #067647;
-  --gain-tint: #e6f6ee;
-  --loss: #e5483b;
-  --loss-ink: #b42318;
-  --loss-tint: #fdecea;
+  --gain: #12a150;
+  --gain-ink: #0b7a44;
+  --gain-tint: #e6f5ec;
+  --loss: #e5372b;
+  --loss-ink: #c4291e;
+  --loss-tint: #fdeceb;
 
-  /* Verdict states: fill, text-safe ink, tint */
-  --calm: #079455;
-  --calm-ink: #067647;
-  --calm-tint: #e6f6ee;
+  /* Verdict states */
+  --calm: #12a150;
+  --calm-ink: #0b7a44;
+  --calm-tint: #e6f5ec;
   --watch: #dc8a08;
-  --watch-ink: #93590a;
+  --watch-ink: #8a560a;
   --watch-tint: #fdf3e2;
   --review: #7f56d9;
   --review-ink: #6941c6;
   --review-tint: #f1ecfc;
   --neutral: #98a2b3;
 
-  /* The page accent starts neutral; the load timeline eases it to the verdict state. */
   --accent: var(--neutral);
   --accent-ink: var(--ink-soft);
   --accent-tint: var(--surface-sunk);
 
-  /* Chart series (allocation, waterfall) */
-  --s1: #2c4bdc;
-  --s2: #12b3a8;
-  --s3: #f59e0b;
+  /* Chart series */
+  --s1: #21305e;
+  --s2: #12a150;
+  --s3: #f2a516;
   --s4: #7f56d9;
   --s5: #ef6820;
   --s6: #0ba5ec;
-  --part-market: #5b7bd9;
-  --part-similar: #9db0e8;
+  --part-market: #4c63b6;
+  --part-similar: #a7b5e6;
   --part-choices: var(--accent);
 
   /* Type */
@@ -72,7 +78,7 @@
   --step-0: 0.9375rem;
   --step-1: 1.0625rem;
   --step-2: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
-  --step-3: clamp(1.6rem, 1.35rem + 1vw, 2.25rem);
+  --step-3: clamp(1.5rem, 1.3rem + 0.9vw, 2rem);
   --measure: 70ch;
 
   /* Space & shape */
@@ -88,7 +94,8 @@
   --radius-s: 8px;
   --radius-m: 12px;
   --radius-l: 16px;
-  --page-max: 76rem;
+  --page-max: 82rem;
+  --rail-w: 92px;
 
   --focus: #2c4bdc;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -96,7 +103,7 @@
 
 @media (min-width: 720px) {
   :root {
-    --gutter: 24px;
+    --gutter: 28px;
     --gap: 20px;
   }
 }
@@ -104,30 +111,35 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0b0f17;
-    --surface: #131a24;
-    --surface-2: #18202c;
-    --surface-sunk: #0f151e;
-    --rule: #222c3a;
-    --rule-strong: #2f3a4a;
+    --bg: #0d1118;
+    --surface: #131922;
+    --surface-2: #19202b;
+    --surface-sunk: #10151d;
+    --rule: #242d3a;
+    --rule-strong: #323d4d;
     --overlay: rgb(0 0 0 / 0.6);
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-lg: -16px 0 48px rgb(0 0 0 / 0.5);
-    --ink: #f2f4f7;
-    --ink-soft: #b4bdca;
-    --ink-faint: #94a0b1;
-    --brand: #6f8cff;
-    --brand-ink: #8aa2ff;
-    --brand-tint: #1a2342;
-    --gain: #32d583;
-    --gain-ink: #47cd89;
-    --gain-tint: #0f2a1e;
-    --loss: #f97066;
-    --loss-ink: #fd8f86;
-    --loss-tint: #331617;
-    --calm: #32d583;
-    --calm-ink: #47cd89;
-    --calm-tint: #0f2a1e;
+    --ink: #f1f3f6;
+    --ink-soft: #b6bfcc;
+    --ink-faint: #97a2b2;
+    --navy: #1c2850;
+    --navy-2: #26346a;
+    --on-navy-soft: #c3cdea;
+    --brand: #22c06a;
+    --brand-btn: #22c06a;
+    --on-brand: #0d1118;
+    --brand-ink: #4bd38a;
+    --brand-tint: #11281c;
+    --pill: #1b222d;
+    --gain: #2fcf74;
+    --gain-ink: #4bd38a;
+    --gain-tint: #11281c;
+    --loss: #f8695f;
+    --loss-ink: #fd8a82;
+    --loss-tint: #331816;
+    --calm: #2fcf74;
+    --calm-ink: #4bd38a;
+    --calm-tint: #11281c;
     --watch: #fdb022;
     --watch-ink: #fec84b;
     --watch-tint: #2f2410;
@@ -135,13 +147,13 @@
     --review-ink: #b692f6;
     --review-tint: #231a3a;
     --neutral: #667085;
-    --s1: #6f8cff;
-    --s2: #2ed3c6;
+    --s1: #7c93e8;
+    --s2: #2fcf74;
     --s3: #fdb022;
     --s4: #9e77ed;
     --s5: #fb7a3c;
     --s6: #36bffa;
-    --part-market: #6f8cff;
+    --part-market: #7c93e8;
     --part-similar: #3d4f86;
     --focus: #8aa2ff;
   }
@@ -149,30 +161,35 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0f17;
-  --surface: #131a24;
-  --surface-2: #18202c;
-  --surface-sunk: #0f151e;
-  --rule: #222c3a;
-  --rule-strong: #2f3a4a;
+  --bg: #0d1118;
+  --surface: #131922;
+  --surface-2: #19202b;
+  --surface-sunk: #10151d;
+  --rule: #242d3a;
+  --rule-strong: #323d4d;
   --overlay: rgb(0 0 0 / 0.6);
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-lg: -16px 0 48px rgb(0 0 0 / 0.5);
-  --ink: #f2f4f7;
-  --ink-soft: #b4bdca;
-  --ink-faint: #94a0b1;
-  --brand: #6f8cff;
-  --brand-ink: #8aa2ff;
-  --brand-tint: #1a2342;
-  --gain: #32d583;
-  --gain-ink: #47cd89;
-  --gain-tint: #0f2a1e;
-  --loss: #f97066;
-  --loss-ink: #fd8f86;
-  --loss-tint: #331617;
-  --calm: #32d583;
-  --calm-ink: #47cd89;
-  --calm-tint: #0f2a1e;
+  --ink: #f1f3f6;
+  --ink-soft: #b6bfcc;
+  --ink-faint: #97a2b2;
+  --navy: #1c2850;
+  --navy-2: #26346a;
+  --on-navy-soft: #c3cdea;
+  --brand: #22c06a;
+  --brand-btn: #22c06a;
+  --on-brand: #0d1118;
+  --brand-ink: #4bd38a;
+  --brand-tint: #11281c;
+  --pill: #1b222d;
+  --gain: #2fcf74;
+  --gain-ink: #4bd38a;
+  --gain-tint: #11281c;
+  --loss: #f8695f;
+  --loss-ink: #fd8a82;
+  --loss-tint: #331816;
+  --calm: #2fcf74;
+  --calm-ink: #4bd38a;
+  --calm-tint: #11281c;
   --watch: #fdb022;
   --watch-ink: #fec84b;
   --watch-tint: #2f2410;
@@ -180,13 +197,13 @@
   --review-ink: #b692f6;
   --review-tint: #231a3a;
   --neutral: #667085;
-  --s1: #6f8cff;
-  --s2: #2ed3c6;
+  --s1: #7c93e8;
+  --s2: #2fcf74;
   --s3: #fdb022;
   --s4: #9e77ed;
   --s5: #fb7a3c;
   --s6: #36bffa;
-  --part-market: #6f8cff;
+  --part-market: #7c93e8;
   --part-similar: #3d4f86;
   --focus: #8aa2ff;
 }

@@ -12,7 +12,9 @@ export default function HistoryPage() {
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">History</h1>
+          <h1 className="page-title">
+            <span className="crumb">Mutual Funds /</span> Performance
+          </h1>
           <p className="page-sub">One weak week means little; persistent underperformance against the category is what warrants attention.</p>
         </div>
       </div>

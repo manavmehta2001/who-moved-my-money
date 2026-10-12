@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import { AdminProvider } from "@/components/admin/AdminProvider";
 import { GlossaryProvider } from "@/components/glossary/Glossary";
-import { SiteNav } from "@/components/SiteNav";
-import { THEME_INIT_SCRIPT, ThemeToggle } from "@/components/ThemeToggle";
+import { SideRail } from "@/components/shell/SideRail";
+import { Ticker } from "@/components/shell/Ticker";
+import { TopBar } from "@/components/shell/TopBar";
+import { THEME_INIT_SCRIPT } from "@/components/ThemeToggle";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#131a24" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1118" },
   ],
 };
 
@@ -33,30 +35,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <AdminProvider>
           <GlossaryProvider>
-            <header className="app-header">
-              <div className="app-header-inner">
-                <Link href="/" className="brand">
-                  <span className="brand-mark" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 11.5l3.5-3.5 2.5 2.5L14 4.5" />
-                      <path d="M10 4.5h4v4" />
-                    </svg>
-                  </span>
-                  Who moved my money?
-                </Link>
-                <SiteNav />
-                <div className="header-tools">
-                  <ThemeToggle />
-                </div>
+            <div className="shell">
+              <SideRail />
+              <div className="shell-main">
+                <header className="app-header">
+                  <TopBar />
+                  <Suspense fallback={<div className="ticker" aria-hidden="true" />}>
+                    <Ticker />
+                  </Suspense>
+                </header>
+                <main id="main" className="container">
+                  {children}
+                </main>
+                <footer className="site-footer">
+                  <p>This is an educational tool, not investment advice. Not SEBI-registered advice.</p>
+                  <p>NAVs: mfapi.in and AMFI · Benchmarks: index funds via mfapi.in and Yahoo Finance · News: GNews and Google News · Analyst note: Google Gemini.</p>
+                </footer>
               </div>
-            </header>
-            <main id="main" className="container">
-              {children}
-            </main>
-            <footer className="site-footer">
-              <p>This is an educational tool, not investment advice. Not SEBI-registered advice.</p>
-              <p>NAVs: mfapi.in and AMFI · Benchmarks: index funds via mfapi.in and Yahoo Finance · News: GNews and Google News · Analyst note: Google Gemini.</p>
-            </footer>
+            </div>
           </GlossaryProvider>
         </AdminProvider>
       </body>

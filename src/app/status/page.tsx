@@ -26,7 +26,9 @@ export default function StatusPage() {
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Data status</h1>
+          <h1 className="page-title">
+            <span className="crumb">Mutual Funds /</span> Data status
+          </h1>
           <p className="page-sub">Where every number comes from, how fresh it is, and whether the scheduled jobs are running.</p>
         </div>
       </div>

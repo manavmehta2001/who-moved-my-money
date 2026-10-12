@@ -40,7 +40,9 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
     <DashboardMotion state={view.state} week={r.weekEnding}>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Portfolio</h1>
+          <h1 className="page-title">
+            <span className="crumb">Mutual Funds /</span> Portfolio
+          </h1>
           <p className="page-sub">
             Weekly review for the week ending {formatDisplayDate(r.weekEnding)}
             {!view.isLatest && (

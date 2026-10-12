@@ -41,9 +41,20 @@ function prettyDate(iso: string | null): string {
 }
 
 const num = (v: string) => (v.trim() === "" ? null : Number(v));
+const AVATAR = ["#21305e", "#0b8048", "#b45309", "#6941c6", "#c2410c", "#0369a1"];
+function avatarColour(name: string) {
+  let h = 0;
+  for (const c of name.split(/\s+/)[0]) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return AVATAR[h % AVATAR.length];
+}
+function initialsOf(name: string) {
+  const w = name.split(/\s+/);
+  return (/^[A-Z]{2,}$/.test(w[0]) ? w[0].slice(0, 2) : w[0][0] + (w[1]?.[0] ?? "")).toUpperCase();
+}
+
 const invalidAmount = (v: string) => v.trim() !== "" && !(Number(v) > 0);
 
-export function FundsManager({ initial, removed, benchmarks }: { initial: FundRow[]; removed: Array<{ schemeCode: string; name: string }>; benchmarks: Array<{ key: string; label: string }> }) {
+export function FundsManager({ initial, removed, benchmarks, search }: { search?: string; initial: FundRow[]; removed: Array<{ schemeCode: string; name: string }>; benchmarks: Array<{ key: string; label: string }> }) {
   const router = useRouter();
   const { adminFetch } = useAdmin();
   const [removedLocally, setRemovedLocally] = useState<Set<string>>(() => new Set());
@@ -51,7 +62,7 @@ export function FundsManager({ initial, removed, benchmarks }: { initial: FundRo
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [editing, setEditing] = useState<FundRow | null>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLTableSectionElement>(null);
 
   // Responsive motion for user actions only: a new row slides in.
   useGSAP(
@@ -99,32 +110,63 @@ export function FundsManager({ initial, removed, benchmarks }: { initial: FundRo
         {rows.length === 0 ? (
           <p className="muted">No funds yet. Add one with its scheme code.</p>
         ) : (
-          <ul className="fund-list" ref={listRef}>
-            {rows.map((f) => (
-              <li key={f.schemeCode} className="fund-row" data-code={f.schemeCode}>
-                <div>
-                  <strong>{f.name}</strong>
-                  <div className="meta">
-                    {f.schemeCode} · {f.categoryLabel} · <Term t="benchmark" />: {f.benchmarkLabel ?? "category average only"} · <Term t="NAV" /> {prettyDate(f.lastNavDate)}
-                  </div>
-                  <div className="meta">
-                    {f.monthlySip ? `SIP ${rupees(f.monthlySip)}/month` : "No SIP set"}
-                    {f.unitsHeld ? ` · ${f.unitsHeld.toLocaleString("en-IN")} units` : ""}
-                    {f.investedAmount ? ` · ${rupees(f.investedAmount)} invested` : ""}
-                    {f.holdingsSample && <span className="chip brand" style={{ marginLeft: 6 }}>Sample</span>}
-                  </div>
-                </div>
-                <div className="row-actions">
-                  <button type="button" className="button quiet small" onClick={() => setEditing(f)} aria-label={`Edit holdings for ${f.name}`}>
-                    Edit
-                  </button>
-                  <button type="button" className="button quiet small" onClick={() => remove(f.schemeCode, f.name)} aria-label={`Remove ${f.name}`}>
-                    Remove
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="table-scroll ind-table-wrap">
+            <table className="ind-table">
+              <caption className="sr-only">Funds in the weekly report, with holdings and actions</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Fund</th>
+                  <th scope="col" className="hide-sm">
+                    <Term t="benchmark">Benchmark</Term>
+                  </th>
+                  <th scope="col">Holdings</th>
+                  <th scope="col">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody ref={listRef}>
+                {rows.map((f) => (
+                  <tr key={f.schemeCode} data-code={f.schemeCode}>
+                    <td>
+                      <div className="fund-cell">
+                        <span className="amc-logo" style={{ background: avatarColour(f.name) }} aria-hidden="true">
+                          {initialsOf(f.name)}
+                        </span>
+                        <span className="fund-names">
+                          <span className="amc-name">
+                            <span className="num">{f.schemeCode}</span> · <Term t="NAV" /> {prettyDate(f.lastNavDate)}
+                          </span>
+                          <strong className="fund-name">{f.name}</strong>
+                          <span className="fund-meta">
+                            <span className="tag">{f.categoryLabel}</span>
+                            {f.holdingsSample && <span className="tag brand">Sample</span>}
+                          </span>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="hide-sm">{f.benchmarkLabel ?? <span className="faint">Category average only</span>}</td>
+                    <td>
+                      <span className="num strong">{f.monthlySip ? `${rupees(f.monthlySip)}/mo` : "No SIP"}</span>
+                      <span className="cell-sub faint">
+                        {f.investedAmount ? `${rupees(f.investedAmount)} invested` : f.unitsHeld ? `${f.unitsHeld.toLocaleString("en-IN")} units` : "No holdings set"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="row-actions">
+                        <button type="button" className="button quiet small" onClick={() => setEditing(f)} aria-label={`Edit holdings for ${f.name}`}>
+                          Edit
+                        </button>
+                        <button type="button" className="button quiet small" onClick={() => remove(f.schemeCode, f.name)} aria-label={`Remove ${f.name}`}>
+                          Remove
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -144,7 +186,7 @@ export function FundsManager({ initial, removed, benchmarks }: { initial: FundRo
             }}
           />
         </section>
-        <SchemeSearch />
+        <SchemeSearch key={search} initialQuery={search} />
       </div>
 
       <EditHoldings
@@ -455,15 +497,15 @@ function AddFundForm({ benchmarks, removed, onAdded }: { benchmarks: Array<{ key
   );
 }
 
-function SchemeSearch() {
+function SchemeSearch({ initialQuery }: { initialQuery?: string }) {
   const id = useId();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery ?? "");
   const [results, setResults] = useState<Array<{ schemeCode: string; schemeName: string }>>([]);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
-  async function search(e: FormEvent) {
-    e.preventDefault();
+  async function search(e?: FormEvent) {
+    e?.preventDefault();
     if (q.trim().length < 3) {
       setMessage("Type at least 3 letters of the fund's name.");
       return;
@@ -482,6 +524,15 @@ function SchemeSearch() {
       setMessage(err instanceof Error ? err.message : "Search failed.");
     }
   }
+
+  // Arriving from the top-bar search runs the search straight away.
+  const ran = useRef(false);
+  useEffect(() => {
+    if (ran.current || !initialQuery) return;
+    ran.current = true;
+    void search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery]);
 
   async function copy(code: string) {
     try {

@@ -8,6 +8,8 @@ import { Pct } from "@/components/checkin/Pct";
 import { WorryDial } from "@/components/checkin/WorryDial";
 import { ShareButtons } from "@/components/checkin/ShareButtons";
 import { SheetTrigger } from "./Sheet";
+import { AmountToggle } from "./AmountToggle";
+import { HoldingsTable, type HoldingRow } from "./HoldingsTable";
 
 const SERIES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)", "var(--s6)"];
 
@@ -47,49 +49,50 @@ function ValueChart({ history }: { history: PortfolioSummary["history"] }) {
   );
 }
 
+const compactInr = (x: number) =>
+  x >= 1e7 ? `₹${(x / 1e7).toFixed(2)}Cr` : x >= 1e5 ? `₹${(x / 1e5).toFixed(2)}L` : inr(x);
+
 export function PortfolioCard({ p, weekEnding }: { p: PortfolioSummary; weekEnding: string }) {
   return (
-    <section className="card" aria-labelledby="pf-title">
-      <div className="card-head" style={{ marginBottom: 0 }}>
-        <h2 id="pf-title" className="kpi-label">
-          Current value
+    <section className="card hero" aria-labelledby="pf-title">
+      <div className="hero-head">
+        <h2 id="pf-title" className="hero-label">
+          My portfolio <AmountToggle />
         </h2>
         {p.sample && (
-          <span className="chip brand" title="Units and invested amounts come from replaying Meera's monthly SIPs since January 2024 at real NAVs. Edit them on My funds.">
+          <span className="hero-pill" title="Units and invested amounts come from replaying Meera's monthly SIPs since January 2024 at real NAVs. Edit them on My Funds.">
             Sample holdings
           </span>
         )}
       </div>
-      <p className="kpi-value num" data-countup-inr={Math.round(p.value)}>
-        {inr(p.value)}
+      <p className="hero-value num amount" title={inr(p.value)}>
+        {compactInr(p.value)}
+        <span className="sr-only"> ({inr(p.value)})</span>
       </p>
-      <p className="faint">
-        <span className={p.gain >= 0 ? "up" : "down"} style={{ fontWeight: 650 }}>
-          {signedInr(p.gain)} (<Pct value={p.gainPct} />)
-        </span>{" "}
-        total returns · NAVs as of {formatDisplayDate(p.valueAsOf)}
+      <p className="hero-sub">
+        Current value · NAVs as of {formatDisplayDate(p.valueAsOf)}
       </p>
-      <div className="kpi-row">
-        <div className="kpi">
-          <span className="faint">Invested</span>
-          <strong>{inr(p.invested)}</strong>
+      <div className="hero-stats">
+        <div>
+          <span>Invested</span>
+          <strong className="num amount">{inr(p.invested)}</strong>
         </div>
-        <div className="kpi">
-          <span className="faint">This week</span>
-          <strong className={p.weekChange >= 0 ? "up" : "down"}>{signedInr(p.weekChange)}</strong>
-          <span className="cell-sub">
-            <Pct value={p.weekChangePct} /> <span className="faint">to {shortDate(weekEnding)}</span>
-          </span>
-        </div>
-        <div className="kpi">
-          <span className="faint">Absolute return</span>
-          <strong>
-            <Pct value={p.gainPct} />
+        <div>
+          <span>Total returns</span>
+          <strong className="num">
+            <span className="amount">{signedInr(p.gain)}</span> <Pct value={p.gainPct} />
           </strong>
         </div>
-        <div className="kpi">
-          <span className="faint">Funds</span>
-          <strong>{p.allocation.length}</strong>
+        <div>
+          <span>This week</span>
+          <strong className="num">
+            <span className="amount">{signedInr(p.weekChange)}</span> <Pct value={p.weekChangePct} />
+          </strong>
+          <small>to {shortDate(weekEnding)}</small>
+        </div>
+        <div>
+          <span>Funds</span>
+          <strong className="num">{p.allocation.length}</strong>
         </div>
       </div>
       <ValueChart history={p.history} />
@@ -137,18 +140,42 @@ export function VerdictCard({ view }: { view: CheckinView }) {
 
 const DRIVER_SHORT = { market: "Market", similar_funds: "Category", fund_choices: "Fund" } as const;
 
-function DriverChip({ f }: { f: FundCard }) {
-  const s = f.latest;
-  const d = dominantDriver({ market: s.market1w, similarFunds: s.similarFunds1w, fundChoices: s.fundChoices1w });
-  if (!d) return <span className="faint">—</span>;
-  return (
-    <span className={d === "fund_choices" ? "chip accent" : "chip"} title="The biggest part of this week's move: the market (benchmark), the category, or the fund's own choices">
-      {DRIVER_SHORT[d]}
-    </span>
-  );
+
+const MULTI_WORD_AMC = ["Nippon India", "Aditya Birla Sun Life", "Motilal Oswal", "Parag Parikh", "ICICI Prudential", "Kotak Mahindra", "Mirae Asset", "Franklin Templeton", "Franklin India", "Bank of India", "Canara Robeco", "Union", "Quant", "PGIM India", "Baroda BNP Paribas", "Mahindra Manulife", "White Oak", "Invesco India", "LIC MF", "Aditya Birla"];
+
+function amcOf(name: string): string {
+  const hit = MULTI_WORD_AMC.find((a) => name.toLowerCase().startsWith(a.toLowerCase()));
+  return hit ?? name.split(/\s+/)[0];
+}
+
+function groupOf(f: FundCard): HoldingRow["group"] {
+  if (/overseas|international|fof.*(us|global)|nasdaq|s&p/i.test(`${f.categoryLabel} ${f.name}`)) return "international";
+  if (f.isDebt) return "debt";
+  if (/equity|index/i.test(f.categoryLabel)) return "equity";
+  return "other";
 }
 
 export function HoldingsCard({ funds }: { funds: FundCard[] }) {
+  const rows: HoldingRow[] = funds.map((f) => {
+    const s = f.latest;
+    const d = dominantDriver({ market: s.market1w, similarFunds: s.similarFunds1w, fundChoices: s.fundChoices1w });
+    return {
+      code: f.schemeCode,
+      shortName: f.shortName,
+      amc: amcOf(f.name),
+      category: f.categoryLabel.replace(/^(Equity|Debt|Hybrid): /, ""),
+      group: groupOf(f),
+      flagged: f.flagged,
+      value: f.holdings.value,
+      gainPct: f.holdings.gainPct,
+      weekChange: f.holdings.weekChange,
+      ret1w: s.fundRet1w,
+      ret1m: s.fundRet1m,
+      retYtd: s.fundRetYtd,
+      gap1w: s.fundRet1w !== null && s.catRet1w !== null ? s.fundRet1w - s.catRet1w : null,
+      driver: d ? DRIVER_SHORT[d] : null,
+    };
+  });
   return (
     <section className="card" aria-labelledby="holdings-title">
       <div className="card-head">
@@ -157,75 +184,7 @@ export function HoldingsCard({ funds }: { funds: FundCard[] }) {
         </h2>
         <span className="card-sub">Tap a fund for the full analysis</span>
       </div>
-      <div className="table-scroll">
-        <table className="holdings">
-          <caption className="sr-only">Your funds with current value, returns and this week&rsquo;s move against their category</caption>
-          <thead>
-            <tr>
-              <th scope="col">Fund</th>
-              <th scope="col">Current value</th>
-              <th scope="col">1W</th>
-              <th scope="col" className="hide-sm">
-                vs <Term t="category average">category</Term>
-              </th>
-              <th scope="col" className="hide-sm">
-                Moved by
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {funds.map((f) => {
-              const h = f.holdings;
-              const s = f.latest;
-              const gap = s.fundRet1w !== null && s.catRet1w !== null ? s.fundRet1w - s.catRet1w : null;
-              return (
-                <tr key={f.schemeCode} data-anim="row">
-                  <td>
-                    <div className="fund-cell">
-                      <SheetTrigger id={f.schemeCode} className="fund-open" label={`${f.shortName}: open full analysis`}>
-                        {f.shortName}
-                      </SheetTrigger>
-                      <span className="fund-meta">
-                        <span className="chip">{f.categoryLabel.replace(/^(Equity|Debt|Hybrid): /, "")}</span>
-                        {f.flagged && <span className="chip accent">Watch</span>}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="num" style={{ fontWeight: 650 }}>
-                      {h.value !== null ? inr(h.value) : "—"}
-                    </span>
-                    {h.gainPct !== null && (
-                      <span className="cell-sub">
-                        <Pct value={h.gainPct} />
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <Pct value={s.fundRet1w} />
-                    {h.weekChange !== null && <span className={`cell-sub num ${h.weekChange >= 0 ? "up" : "down"}`}>{signedInr(h.weekChange)}</span>}
-                  </td>
-                  <td className="hide-sm">
-                    {gap === null ? (
-                      <span className="faint">—</span>
-                    ) : Math.abs(gap) < 0.00005 ? (
-                      <span className="flat num">level</span>
-                    ) : (
-                      <span className={`num ${gap > 0 ? "up" : "down"}`}>
-                        {gap > 0 ? "▲ " : "▼ "}
-                        {Math.abs(gap * 100).toFixed(2)} pp<span className="sr-only">{gap > 0 ? " ahead" : " behind"}</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="hide-sm">
-                    <DriverChip f={f} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <HoldingsTable rows={rows} />
     </section>
   );
 }

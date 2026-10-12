@@ -30,7 +30,7 @@ function subscribe(onChange: () => void) {
   };
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const choice = useSyncExternalStore(subscribe, read, () => "system" as Choice);
 
   function cycle() {
@@ -48,12 +48,12 @@ export function ThemeToggle() {
   }
 
   return (
-    <button type="button" className="icon-button" onClick={cycle} aria-label={`${SHORT[choice]} theme. Change theme`}>
+    <button type="button" className={compact ? "rail-item rail-button" : "icon-button"} onClick={cycle} aria-label={`${SHORT[choice]} theme. Change theme`}>
       <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
         <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
         <path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor" />
       </svg>
-      <span className="theme-label">{SHORT[choice]}</span>
+      <span className={compact ? "rail-label" : "theme-label"}>{SHORT[choice]}</span>
     </button>
   );
 }
