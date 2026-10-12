@@ -53,7 +53,7 @@ export function ThemeToggle() {
         <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
         <path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor" />
       </svg>
-      <span>{choice === "system" ? "Auto" : choice === "light" ? "Light" : "Dark"}</span>
+      <span className="theme-label">{choice === "system" ? "Auto" : choice === "light" ? "Light" : "Dark"}</span>
     </button>
   );
 }

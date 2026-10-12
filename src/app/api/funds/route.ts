@@ -15,6 +15,7 @@ const addFundSchema = z.object({
   benchmarkKey: z.string().nullable().optional(),
   monthlySip: optionalAmount,
   unitsHeld: optionalAmount,
+  investedAmount: z.number().positive().max(1e12).nullable().optional(),
 });
 
 const STATUS: Record<FundLookupError["kind"], number> = { invalid_code: 400, not_found: 404, source_down: 503 };

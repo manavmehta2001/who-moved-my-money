@@ -5,14 +5,18 @@ import { getHistoryView, VERDICT_STATE } from "@/lib/data/views";
 import { formatDisplayDate } from "@/lib/dates";
 import { Term } from "@/components/glossary/Glossary";
 
-export const metadata: Metadata = { title: "Past Saturdays" };
+export const metadata: Metadata = { title: "History" };
 
 export default function HistoryPage() {
   return (
     <>
-      <h1 className="page-title">Past Saturdays</h1>
-      <p className="lede">One bad week means little. A fund that trails funds like it week after week is the one to keep an eye on.</p>
-      <Suspense fallback={<p className="muted">Loading past check-ins…</p>}>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">History</h1>
+          <p className="page-sub">One weak week means little; persistent underperformance against the category is what warrants attention.</p>
+        </div>
+      </div>
+      <Suspense fallback={<p className="muted">Loading history…</p>}>
         <History />
       </Suspense>
     </>
@@ -20,37 +24,40 @@ export default function HistoryPage() {
 }
 
 const MARK: Record<string, { symbol: string; word: string }> = {
-  ahead: { symbol: "▲", word: "ahead of similar funds" },
-  behind: { symbol: "▼", word: "behind similar funds" },
-  level: { symbol: "=", word: "level with similar funds" },
+  ahead: { symbol: "▲", word: "ahead of its category" },
+  behind: { symbol: "▼", word: "behind its category" },
+  level: { symbol: "=", word: "in line with its category" },
   none: { symbol: "·", word: "no data" },
 };
 
 async function History() {
   const view = await getHistoryView();
   return (
-    <>
-      <section aria-labelledby="grid-title" style={{ marginTop: "var(--space-5)" }}>
-        <h2 id="grid-title" style={{ fontSize: "var(--step-2)" }}>
-          Weeks beating <Term t="similar funds" />
-        </h2>
+    <div className="funds-grid">
+      <section className="card" aria-labelledby="grid-title">
+        <div className="card-head">
+          <h2 id="grid-title" className="card-title">
+            Weekly performance vs <Term t="category average">category</Term>
+          </h2>
+          <span className="card-sub">Last {view.weeks.length} weeks</span>
+        </div>
         {view.grid.length === 0 || view.weeks.length === 0 ? (
           <p className="muted">No weekly data yet.</p>
         ) : (
           <>
-            <ul style={{ listStyle: "none", padding: 0, margin: "var(--space-3) 0 0", display: "grid", gap: "var(--space-1)" }}>
+            <ul className="summary-list">
               {view.grid.map((g) => (
                 <li key={g.schemeCode}>
                   <strong>{g.shortName}</strong>{" "}
                   <span className="muted">
                     {g.behindRecent === 0
-                      ? `kept up with or beat similar funds in each of the last ${g.recentWindow} weeks.`
-                      : `lagged similar funds in ${g.behindRecent} of the last ${g.recentWindow} weeks.`}
+                      ? `in line with or ahead of its category in each of the last ${g.recentWindow} weeks.`
+                      : `behind its category in ${g.behindRecent} of the last ${g.recentWindow} weeks.`}
                   </span>
                 </li>
               ))}
             </ul>
-            <div className="grid-wrap">
+            <div>
               <ul className="week-strips">
                 {view.grid.map((g) => (
                   <li key={g.schemeCode}>
@@ -84,10 +91,12 @@ async function History() {
         )}
       </section>
 
-      <section aria-labelledby="reports-title" style={{ marginTop: "var(--space-6)" }}>
-        <h2 id="reports-title" style={{ fontSize: "var(--step-2)" }}>
-          Past reports
-        </h2>
+      <section className="card" aria-labelledby="reports-title">
+        <div className="card-head">
+          <h2 id="reports-title" className="card-title">
+            Weekly reports
+          </h2>
+        </div>
         {view.reports.length === 0 ? (
           <p className="muted">No reports yet. The first one arrives on Saturday morning.</p>
         ) : (
@@ -99,7 +108,7 @@ async function History() {
                   <strong>{r.verdict}</strong>
                   <span className="muted">{r.headline}</span>
                   <span className="faint">
-                    Worry {r.worryScore}/100 · {r.writtenBy === "gemini" ? "written by Gemini" : "written without AI"}
+                    Risk score {r.worryScore}/100 · {r.writtenBy === "gemini" ? "AI-written, fact-checked" : "written without AI"}
                   </span>
                 </Link>
               </li>
@@ -107,9 +116,9 @@ async function History() {
           </ul>
         )}
         <p className="faint" style={{ marginTop: "var(--space-3)" }}>
-          Full written reports start from the week this app was set up; the grid above goes back {view.weeks.length} weeks using the same calculations.
+          Written reports start from the week this app was set up; the weekly grid goes back {view.weeks.length} weeks using the same calculations.
         </p>
       </section>
-    </>
+    </div>
   );
 }

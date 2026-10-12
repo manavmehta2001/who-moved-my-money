@@ -25,10 +25,11 @@ const patchSchema = z
     benchmarkKey: z.string().nullable().optional(),
     monthlySip: z.number().positive().max(1e9).nullable().optional(),
     unitsHeld: z.number().positive().max(1e9).nullable().optional(),
+    investedAmount: z.number().positive().max(1e12).nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, "Nothing to update.");
 
-/** Change the benchmark (or SIP / units) and recompute that fund's snapshots. */
+/** Change the benchmark, SIP, units or invested amount; a benchmark change recomputes that fund's snapshots. */
 export async function PATCH(request: Request, ctx: RouteContext<"/api/funds/[code]">) {
   if (!(await isAdmin(request))) return unauthorized();
   const { code } = await ctx.params;
@@ -37,7 +38,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/funds/[cod
   const { benchmarkKey } = parsed.data;
   if (benchmarkKey && !BENCHMARKS.some((b) => b.key === benchmarkKey && b.sourceType === "mf_proxy")) return errorJson(`Unknown benchmark "${benchmarkKey}".`, 400);
 
-  const [updated] = await db().update(funds).set(parsed.data).where(eq(funds.schemeCode, code)).returning();
+  // Meera's own numbers replace the sample holdings.
+  const editsHoldings = parsed.data.unitsHeld !== undefined || parsed.data.investedAmount !== undefined;
+  const [updated] = await db()
+    .update(funds)
+    .set({ ...parsed.data, ...(editsHoldings ? { holdingsSample: false } : {}) })
+    .where(eq(funds.schemeCode, code))
+    .returning();
   if (!updated) return errorJson(`No fund with scheme code ${code}.`, 404);
   if (benchmarkKey !== undefined) {
     await withJobRun("recompute-fund", (jc) => computeSnapshots(jc, currentWeekEnding(), { funds: [updated] }));

@@ -5,10 +5,12 @@ import type { ReportOutput } from "./schema";
 const n2 = (x: number) => Math.abs(x).toFixed(2);
 
 function moved(x: number | null, subject: string): string {
-  if (x === null) return `${subject} has no figure this week`;
-  if (Math.abs(x) < 0.005) return `${subject} was flat at 0.00%`;
-  return `${subject} ${x > 0 ? "rose" : "fell"} ${n2(x)}%`;
+  if (x === null) return `${subject} has no reported return this week`;
+  if (Math.abs(x) < 0.005) return `${subject} was unchanged at 0.00%`;
+  return `${subject} ${x > 0 ? "returned" : "declined"} ${n2(x)}%`;
 }
+
+const verb = (x: number) => (x >= 0 ? "returned" : "declined");
 
 function relation(gap: number, what: string): string {
   if (Math.abs(gap) < 0.005) return `in line with ${what}`;
@@ -23,27 +25,27 @@ function sentenceTwo(f: FactSheetFund): string {
   const { market, similarFunds } = f.thisWeek;
   const g = f.gaps;
   if (market !== null && similarFunds !== null && g.weekVsSimilar !== null) {
-    return `The market (${f.marketYardstick}) ${market >= 0 ? "rose" : "fell"} ${n2(market)}% and similar funds ${similarFunds >= 0 ? "rose" : "fell"} ${n2(similarFunds)}% on average, so it was ${relation(g.weekVsSimilar, "funds like it")}.`;
+    return `Its benchmark, the ${f.marketYardstick}, ${verb(market)} ${n2(market)}% and the category average ${verb(similarFunds)} ${n2(similarFunds)}%, placing the fund ${relation(g.weekVsSimilar, "its category")}.`;
   }
   if (similarFunds !== null && g.weekVsSimilar !== null) {
-    return `There is no public benchmark for this fund, so it is compared with ${f.similarFundsCompared} similar funds, which ${similarFunds >= 0 ? "rose" : "fell"} ${n2(similarFunds)}% on average, leaving it ${relation(g.weekVsSimilar, "them")}.`;
+    return `With no public benchmark available, it is measured against the average of ${f.similarFundsCompared} comparable funds, which ${verb(similarFunds)} ${n2(similarFunds)}%, placing it ${relation(g.weekVsSimilar, "that average")}.`;
   }
   if (market !== null && g.weekVsMarket !== null) {
-    return `The market (${f.marketYardstick}) ${market >= 0 ? "rose" : "fell"} ${n2(market)}%, so it was ${relation(g.weekVsMarket, "the market")}.`;
+    return `Its benchmark, the ${f.marketYardstick}, ${verb(market)} ${n2(market)}%, placing the fund ${relation(g.weekVsMarket, "the benchmark")}.`;
   }
-  return "There was nothing reliable to compare it with this week.";
+  return "No reliable comparison was available this week.";
 }
 
 function sentenceThree(f: FactSheetFund): string {
   switch (f.whoMovedItThisWeek.biggestPart) {
     case "The market":
-      return "Most of this week's move came from the market as a whole rather than anything specific to your fund.";
+      return "The move was driven primarily by the broader market rather than fund-specific factors.";
     case "Funds like yours":
-      return "Most of the move was shared by funds like yours, and no single headline clearly explains it.";
+      return "The move was largely shared across the category, and no specific headline explains it.";
     case "Your fund's choices":
-      return "Most of the difference came from your fund's own choices, and no single headline clearly explains it.";
+      return "The difference reflects the fund's own portfolio choices, and no specific headline explains it.";
     default:
-      return "No single headline clearly explains this week's move.";
+      return "No specific headline explains this week's move.";
   }
 }
 
@@ -55,7 +57,7 @@ export function templateReport(sheet: FactSheet): ReportOutput {
     summary: [sentenceOne(f), sentenceTwo(f), sentenceThree(f)].join(" "),
     citedHeadlineIds: [],
   }));
-  const headline = `${up} of your ${sheet.funds.length} funds rose in ${sheet.weekLabel}. ${sheet.verdict}.`;
+  const headline = `Weekly portfolio review: ${up} of ${sheet.funds.length} funds advanced in ${sheet.weekLabel}`;
   const all = [headline, sheet.verdictFacts, ...funds.map((f) => f.summary)].join(" ");
   return { headline, funds, verdict: sheet.verdict, verdictReason: sheet.verdictFacts, jargonUsed: termsIn(all) };
 }

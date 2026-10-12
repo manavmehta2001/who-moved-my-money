@@ -31,6 +31,34 @@ export type FundCard = {
   history: Array<Pick<WeeklySnapshot, "weekEnding" | "fundRet1w" | "benchRet1w" | "catRet1w" | "fundChoices1w">>;
   benchmarkLabel: string | null;
   flagged: boolean;
+  holdings: {
+    units: number | null;
+    invested: number | null;
+    sample: boolean;
+    monthlySip: number | null;
+    latestNav: number;
+    latestNavDate: IsoDate;
+    value: number | null;
+    gain: number | null;
+    gainPct: number | null;
+    /** Rupee change over the report week, at today's units. */
+    weekChange: number | null;
+  };
+};
+
+export type PortfolioSummary = {
+  value: number;
+  invested: number;
+  gain: number;
+  gainPct: number;
+  weekChange: number;
+  weekChangePct: number;
+  valueAsOf: IsoDate;
+  sample: boolean;
+  fundsWithHoldings: number;
+  /** Portfolio value at each snapshot week, at today's units. */
+  history: Array<{ weekEnding: IsoDate; value: number }>;
+  allocation: Array<{ schemeCode: string; shortName: string; value: number; weight: number; targetWeight: number | null }>;
 };
 
 export type CheckinView = {
@@ -42,6 +70,7 @@ export type CheckinView = {
   newsProvider: string | null;
   removedSince: string[];
   isLatest: boolean;
+  portfolio: PortfolioSummary | null;
 };
 
 async function reportFor(week?: string): Promise<Report | null> {
@@ -66,6 +95,19 @@ export async function getCheckinView(week?: string): Promise<CheckinView | null>
     : [];
   const [mc] = await db().select().from(marketContext).where(eq(marketContext.weekEnding, report.weekEnding)).limit(1);
   const benchLabels = new Map((await db().select({ key: benchmarks.key, label: benchmarks.label }).from(benchmarks)).map((b) => [b.key, b.label]));
+  const latestNavRows = codes.length
+    ? await db()
+        .select({ code: navHistory.schemeCode, date: max(navHistory.navDate) })
+        .from(navHistory)
+        .where(inArray(navHistory.schemeCode, codes))
+        .groupBy(navHistory.schemeCode)
+    : [];
+  const latestNavs = new Map<string, { date: IsoDate; nav: number }>();
+  for (const r of latestNavRows) {
+    if (!r.date) continue;
+    const [row] = await db().select({ nav: navHistory.nav }).from(navHistory).where(and(eq(navHistory.schemeCode, r.code), eq(navHistory.navDate, r.date))).limit(1);
+    if (row) latestNavs.set(r.code, { date: r.date, nav: row.nav });
+  }
 
   const cards: FundCard[] = [];
   const removedSince: string[] = [];
@@ -87,6 +129,7 @@ export async function getCheckinView(week?: string): Promise<CheckinView | null>
       history: history.map(({ weekEnding, fundRet1w, benchRet1w, catRet1w, fundChoices1w }) => ({ weekEnding, fundRet1w, benchRet1w, catRet1w, fundChoices1w })),
       benchmarkLabel: latest.provenance.benchmark?.label ?? (f.benchmarkKey ? (benchLabels.get(f.benchmarkKey) ?? null) : null),
       flagged: latest.flags.length > 0,
+      holdings: holdingsFor(f, latest, latestNavs.get(f.schemeCode)),
     });
   }
 
@@ -99,6 +142,64 @@ export async function getCheckinView(week?: string): Promise<CheckinView | null>
     newsProvider: mc?.newsProvider ?? null,
     removedSince,
     isLatest: latestRow?.w === report.weekEnding,
+    portfolio: portfolioSummary(cards, snaps),
+  };
+}
+
+function holdingsFor(f: Fund, latest: WeeklySnapshot, nav: { date: IsoDate; nav: number } | undefined): FundCard["holdings"] {
+  const latestNav = nav?.nav ?? latest.nav;
+  const latestNavDate = nav?.date ?? latest.navDate;
+  const units = f.unitsHeld;
+  const value = units ? units * latestNav : null;
+  const invested = f.investedAmount;
+  const gain = value !== null && invested ? value - invested : null;
+  const r = latest.fundRet1w;
+  return {
+    units,
+    invested,
+    sample: f.holdingsSample,
+    monthlySip: f.monthlySip,
+    latestNav,
+    latestNavDate,
+    value,
+    gain,
+    gainPct: gain !== null && invested ? gain / invested : null,
+    weekChange: units && r !== null ? units * latest.nav * (r / (1 + r)) : null,
+  };
+}
+
+function portfolioSummary(cards: FundCard[], snaps: WeeklySnapshot[]): PortfolioSummary | null {
+  const held = cards.filter((c) => c.holdings.value !== null);
+  if (held.length === 0) return null;
+  const value = held.reduce((a, c) => a + (c.holdings.value ?? 0), 0);
+  const invested = held.reduce((a, c) => a + (c.holdings.invested ?? 0), 0);
+  const weekChange = held.reduce((a, c) => a + (c.holdings.weekChange ?? 0), 0);
+  const totalSip = cards.every((c) => c.holdings.monthlySip) ? cards.reduce((a, c) => a + (c.holdings.monthlySip ?? 0), 0) : null;
+  const weeks = [...new Set(snaps.map((s) => s.weekEnding))].sort();
+  const history = weeks.map((w) => ({
+    weekEnding: w,
+    value: held.reduce((a, c) => a + (c.holdings.units ?? 0) * (snaps.find((s) => s.schemeCode === c.schemeCode && s.weekEnding === w)?.nav ?? 0), 0),
+  }));
+  return {
+    value,
+    invested,
+    gain: value - invested,
+    gainPct: invested ? (value - invested) / invested : 0,
+    weekChange,
+    weekChangePct: value - weekChange ? weekChange / (value - weekChange) : 0,
+    valueAsOf: held.map((c) => c.holdings.latestNavDate).sort()[0],
+    sample: held.some((c) => c.holdings.sample),
+    fundsWithHoldings: held.length,
+    history,
+    allocation: held
+      .map((c) => ({
+        schemeCode: c.schemeCode,
+        shortName: c.shortName,
+        value: c.holdings.value ?? 0,
+        weight: (c.holdings.value ?? 0) / value,
+        targetWeight: totalSip && c.holdings.monthlySip ? c.holdings.monthlySip / totalSip : null,
+      }))
+      .sort((a, b) => b.value - a.value),
   };
 }
 

@@ -10,6 +10,7 @@ export type AddFundInput = {
   benchmarkKey?: string | null;
   monthlySip?: number | null;
   unitsHeld?: number | null;
+  investedAmount?: number | null;
 };
 
 export class AlreadyAddedError extends Error {
@@ -43,6 +44,8 @@ export async function registerFund(input: AddFundInput, opts: { allowExisting?: 
     benchmarkKey,
     monthlySip: input.monthlySip ?? null,
     unitsHeld: input.unitsHeld ?? null,
+    investedAmount: input.investedAmount ?? null,
+    holdingsSample: false,
     isActive: true,
     removedAt: null,
   };

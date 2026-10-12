@@ -1,6 +1,6 @@
 # Who Moved My Money?
 
-**Meera's Saturday mutual fund check-in.** Every Saturday morning it answers one question in plain language:
+**Meera's mutual fund dashboard.** A portfolio dashboard in the style of an investing app, with a weekly AI analyst note that answers one question:
 
 > *My fund went down — was that the whole market, funds like mine, or my fund itself?*
 
@@ -8,13 +8,13 @@
 
 MESA Cohort C4 · *AI and its Applications* · final project.
 
-| This Saturday | Who moved my money? | Past Saturdays |
-|---|---|---|
-| ![Check-in hero: verdict, worry dial](docs/screenshots/checkin-hero.jpg) | ![A fund's three-part split, sparkline and returns](docs/screenshots/checkin-fund.jpg) | ![Weeks beating similar funds](docs/screenshots/past-saturdays.jpg) |
+![Dashboard: portfolio value, holdings, portfolio health and allocation](docs/screenshots/dashboard-desktop.png)
 
-| My funds | Data status |
-|---|---|
-| ![Add / remove funds by scheme code](docs/screenshots/my-funds.jpg) | ![Source health, job runs, Gemini usage](docs/screenshots/data-status.jpg) |
+| Phone | Fund analysis | Funds | History |
+|---|---|---|---|
+| ![Dashboard on a phone](docs/screenshots/dashboard-phone.png) | ![A fund's analysis sheet: who moved my money, returns vs benchmark and category](docs/screenshots/fund-sheet.png) | ![Add, edit and remove funds](docs/screenshots/funds.png) | ![Weekly performance vs category](docs/screenshots/history.png) |
+
+**Components map:** ![Components map](docs/components-map.png)
 
 ---
 
@@ -94,7 +94,7 @@ All thresholds live in [`src/config/verdict.ts`](src/config/verdict.ts) with com
 
 - **Model:** `GEMINI_MODEL`, default **`gemini-3.8-flash`** (the current stable Flash model on Google's model list when this was built), via the official `@google/genai` SDK with `responseMimeType: "application/json"` and a `responseSchema`. Low "thinking" level: writing from a fixed fact sheet needs little reasoning, and it keeps a report to about 6–12 seconds.
 - **Input:** a fact sheet of rounded numbers (2 decimals) per fund — this week, 1 month, YTD for the fund, the market and similar funds; the gaps; the three-way split and its biggest part; flags with reasons; the index moves; and the week's headlines with ids. The verdict is **given**; Gemini explains it and may not change it.
-- **Style rules (system instruction):** written for a smart 28-year-old who doesn't read factsheets; short sentences; finance terms explained; the market / funds like yours / your fund's choices framing; **no weather or nature words**; never "buy", "sell", "redeem" or "switch" — "keep an eye on" or "talk to your advisor" instead.
+- **Style rules (system instruction):** a professional research-note voice — neutral, precise, third person, correct terminology (benchmark, category average, relative performance, percentage points) with a brief plain explanation the first time a less common term appears; no casual phrasing or alarmist words; **no weather or nature words**; never "buy", "sell", "redeem" or "switch" — "warrants monitoring" or "may be worth discussing with an advisor" instead.
 
 **Hallucination guard** ([`src/lib/gemini/hallucinationGuard.ts`](src/lib/gemini/hallucinationGuard.ts)) — the report is rejected unless:
 1. It matches the JSON schema (zod).
@@ -176,25 +176,26 @@ Both reject requests without `CRON_SECRET` (401), are **idempotent** (running th
 - `POST /api/admin/run-report` — "Generate this week's report now" (passcode or cron secret).
 - `GET /api/funds/lookup?code=` — live preview for the add form (rate-limited); `?q=` searches scheme names.
 - `POST /api/funds`, `DELETE /api/funds/[code]` (soft delete), `PATCH /api/funds/[code]` (change benchmark / SIP / units).
-- `POST /api/admin/session` — enter the passcode once; stored as an HMAC in an httpOnly cookie (the passcode itself is never stored).
+- `POST /api/admin/session` — the passcode is asked once per device, only when a protected action is first used (a small popup, no passcode box on any page); stored as an HMAC in an httpOnly cookie (the passcode itself is never stored).
 - `GET /api/status/check` — live health check of every source (rate-limited).
 
 ## Pages
 
-- **`/` This Saturday** — the verdict as a sentence, the worry dial, the week's headline; one section per fund with its 3-sentence summary, the "Who moved my money?" waterfall, a 12-week sparkline (fund vs benchmark) and a returns table (week / 1 month / YTD for the fund, the benchmark and similar funds); the market strip and the cited headlines; *Send to my CA*. `/?week=YYYY-MM-DD` opens a past report.
-- **`/funds` My funds** — list with remove buttons; add a fund by scheme code with a live preview (name, fund house, category, suggested benchmark, latest NAV and date), optional SIP and units, clear errors (invalid code, not found, IDCW / Regular-plan warnings, already added); *Find a scheme code* search.
-- **`/history` Past Saturdays** — every past report, and a 12-week "weeks beating similar funds" strip per fund ("lagged 4 of the last 6 weeks").
-- **`/status` Data status** — latest NAV per fund, every benchmark series and its source, which benchmark each fund used this week, news provider, Gemini model and usage, recent job runs, and a live **Check all sources now** button.
-- **Glossary drawer** — any dotted-underlined term (NAV, benchmark, YTD, similar funds, repo rate…, plus terms Gemini lists in `jargonUsed`) opens a one-sentence plain explanation. Words inside fund names are never underlined.
+- **`/` Dashboard** — portfolio value with total returns and this week's ₹ change, a 12-week value chart, KPI tiles (invested, this week, absolute return, funds); **Holdings** table (current value, total return, 1W return and ₹ change, gap vs category, what moved it); **Portfolio health** (the verdict as a coloured chip, the flagged fund, the reason, the worry dial); **Allocation** donut with the gap from the SIP-implied target; **Weekly analyst note** (AI headline + one line per fund, *Send to my CA*, *Copy summary*); **Markets this week** (index moves + cited headlines). Tap any fund for its **analysis sheet**: holding stats, the 3-sentence analyst note, the "who moved my money" bars, a 12-week chart vs benchmark, returns vs benchmark and category, and data sources. `/?week=YYYY-MM-DD` opens a past week. A **Refresh report** button regenerates the week (passcode asked once, in a popup).
+- **`/funds` Funds** — your funds with **Edit** (SIP, units held, amount invested) and **Remove**; add a fund by scheme code with a live preview (name, fund house, category, suggested benchmark, latest NAV and date), clear errors (invalid code, not found, IDCW / Regular-plan warnings, already added); *Find a scheme code* search.
+- **`/history` History** — every weekly report, and a 12-week "performance vs category" strip per fund ("behind its category in 4 of the last 6 weeks").
+- **`/status` Data status** — latest NAV per fund, every benchmark series and its source, which benchmark each fund used, news provider, Gemini model and usage, recent job runs, and a live **Check all sources now** button.
+- **Glossary drawer** — dotted-underlined terms (NAV, benchmark, category average, YTD, SIP, repo rate…, plus terms Gemini lists in `jargonUsed`) open a one-sentence plain explanation. Words inside fund names are never underlined.
+
+**Sample holdings.** The brief gives Meera's funds but not her amounts, so rupee values come from replaying each fund's monthly SIP (₹10,000 / ₹7,500 / ₹5,000 / ₹5,000 / ₹2,500 on the 5th of each month since January 2024) at the **real historical NAVs** (`npm run sample-holdings`). They are labelled *Sample holdings* everywhere, and editing a fund's units or invested amount on `/funds` replaces them with Meera's own numbers.
 
 ## Design
 
-- **Concept:** a calm Saturday note from a friend who understands money. The accent colour reflects the verdict; nothing is alarming. **No weather or nature imagery anywhere** — UI, icons, copy, animations, and Gemini's prose (enforced by the guard).
-- **Tokens:** every colour, size and timing is in [`src/styles/tokens.css`](src/styles/tokens.css). Text colours checked against WCAG AA in light and dark themes (dark theme follows the system and has a toggle).
-- **Type:** Bricolage Grotesque for display, Atkinson Hyperlegible (Next) for body — designed by the Braille Institute for legibility. Numbers use tabular figures.
-- **Motion (GSAP):** one orchestrated load timeline — the accent eases from neutral to the verdict colour, the verdict settles in word by word (SplitText), the dial needle sweeps, then the waterfall bars fill in order market → funds like yours → your fund's choices. Sparklines draw once on scroll (DrawSVG + ScrollTrigger). Numbers count up only on first view. Adding a fund slides the new row in; removing collapses it; the glossary slides open. **`prefers-reduced-motion` shows final states instantly** (verified in Chrome with `--force-prefers-reduced-motion`).
-- **Accessibility:** gains and losses never rely on colour alone (▲/▼ arrows plus "up"/"down" for screen readers); labelled inputs; visible focus; skip link. **Lighthouse (mobile, production): Accessibility 100, Best Practices 100, SEO 100 on all four pages.** Performance 79–93; the check-in page's score is held back mainly by the deliberate load animation and GSAP's JavaScript on Lighthouse's throttled mobile profile.
-- **Every number has provenance:** hover a number for its "as of" date and source; each fund has a "Where these numbers come from" section.
+- **Concept:** a professional investing dashboard in the style of Indian investment apps: white cards on a soft grey canvas (dark theme follows the system, with a toggle), Inter typography with tabular figures, a bottom tab bar on phones, and detail in side sheets instead of one long scrolling page. The verdict colour (green / amber / purple) tints the health card and flagged funds. **No weather or nature imagery anywhere** — UI, icons, copy, animations, and Gemini's prose (enforced by the guard).
+- **Tokens:** every colour, size and timing is in [`src/styles/tokens.css`](src/styles/tokens.css). All text colours pass WCAG AA in light and dark (lowest 4.71:1).
+- **Motion (GSAP):** one orchestrated load timeline — the accent eases to the verdict colour, the portfolio value counts up (first view only), the value line and allocation donut draw (DrawSVG), the worry dial sweeps, the holdings rows settle in. Opening a fund's sheet slides it in and fills its "who moved my money" bars in order. Adding a fund slides the new row in; removing collapses it. **`prefers-reduced-motion` shows final states instantly.**
+- **Accessibility:** gains and losses never rely on colour alone (▲/▼ plus "up"/"down" for screen readers); whole holdings rows are keyboard-reachable buttons; labelled inputs; visible focus; skip link.
+- **Every number has provenance:** hover a number for its "as of" date and source; each fund sheet lists its data sources.
 
 ## Tests and checks
 

@@ -22,3 +22,10 @@ export function round4(x: number | null | undefined): number | null {
 export function inr(x: number): string {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(x);
 }
+
+/** "+₹12,345" / "−₹12,345" with a real minus sign. */
+export function signedInr(x: number): string {
+  const s = inr(Math.abs(x));
+  if (Math.round(x) === 0) return s;
+  return `${x > 0 ? "+" : "−"}${s}`;
+}

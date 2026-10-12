@@ -1,30 +1,29 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { Atkinson_Hyperlegible_Next, Bricolage_Grotesque } from "next/font/google";
+import { Inter } from "next/font/google";
+import { AdminProvider } from "@/components/admin/AdminProvider";
 import { GlossaryProvider } from "@/components/glossary/Glossary";
 import { SiteNav } from "@/components/SiteNav";
 import { THEME_INIT_SCRIPT, ThemeToggle } from "@/components/ThemeToggle";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], display: "swap" });
-// Atkinson Hyperlegible was designed by the Braille Institute for low-vision readers: chosen for non-experts.
-const body = Atkinson_Hyperlegible_Next({ variable: "--font-atkinson", subsets: ["latin"], display: "swap", adjustFontFallback: false });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Who moved my money?", template: "%s · Who moved my money?" },
-  description: "Meera's Saturday mutual fund check-in: did the market, funds like hers, or her fund itself move her money this week?",
+  description: "Meera's mutual fund dashboard: what moved each fund this week — the market, its category, or the fund itself.",
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eceeea" },
-    { media: "(prefers-color-scheme: dark)", color: "#141a22" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#131a24" },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+    <html lang="en-IN" className={inter.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
@@ -32,25 +31,34 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a className="skip-link" href="#main">
           Skip to content
         </a>
-        <GlossaryProvider>
-          <div className="page">
-            <header className="site-header">
-              <Link href="/" className="brand">
-                <span className="brand-mark" aria-hidden="true" />
-                Who moved my money?
-              </Link>
-              <ThemeToggle />
-              <SiteNav />
+        <AdminProvider>
+          <GlossaryProvider>
+            <header className="app-header">
+              <div className="app-header-inner">
+                <Link href="/" className="brand">
+                  <span className="brand-mark" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 11.5l3.5-3.5 2.5 2.5L14 4.5" />
+                      <path d="M10 4.5h4v4" />
+                    </svg>
+                  </span>
+                  Who moved my money?
+                </Link>
+                <SiteNav />
+                <div className="header-tools">
+                  <ThemeToggle />
+                </div>
+              </div>
             </header>
-            <main id="main">{children}</main>
+            <main id="main" className="container">
+              {children}
+            </main>
             <footer className="site-footer">
               <p>This is an educational tool, not investment advice. Not SEBI-registered advice.</p>
-              <p>
-                NAVs from mfapi.in and AMFI · benchmarks from index funds (mfapi.in) and Yahoo Finance · news from GNews and Google News · written by Google Gemini.
-              </p>
+              <p>NAVs: mfapi.in and AMFI · Benchmarks: index funds via mfapi.in and Yahoo Finance · News: GNews and Google News · Analyst note: Google Gemini.</p>
             </footer>
-          </div>
-        </GlossaryProvider>
+          </GlossaryProvider>
+        </AdminProvider>
       </body>
     </html>
   );

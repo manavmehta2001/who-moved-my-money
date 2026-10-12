@@ -216,7 +216,7 @@ describe("fundFlags — debt", () => {
   it("flags a weekly fall below −0.3% that is clearly worse than similar funds (possible credit event)", () => {
     const flags = fundFlags("debt", [week(0, { fundRet1w: -0.004, catRet1w: 0.0005, fundRet1m: 0.002, catRet1m: 0.003 })]);
     expect(flags.map((f) => f.code)).toEqual(["debt_weekly_drop"]);
-    expect(flags[0].reason).toContain("0.45 percentage points more than similar debt funds");
+    expect(flags[0].reason).toContain("0.45 percentage points more than comparable debt funds");
   });
 
   it("does not flag a fall that all similar funds share (e.g. after a rate hike)", () => {
@@ -243,7 +243,7 @@ const assess = (code: string, flagged: boolean, assetClass: FundAssessment["asse
   name: `Fund ${code}`,
   assetClass,
   history: [week(0), week(1), week(2), week(3)],
-  flags: flagged ? [{ code: "equity_ytd_lag", reason: "This year it is 5.00 percentage points behind similar funds." }] : [],
+  flags: flagged ? [{ code: "equity_ytd_lag", reason: "Trails its category average by 5.00 percentage points year to date." }] : [],
 });
 const holdings = (codes: string[]) => codes.map((c) => ({ schemeCode: c, name: `Fund ${c}`, monthlySip: 1000, unitsHeld: null, nav: 10 }));
 

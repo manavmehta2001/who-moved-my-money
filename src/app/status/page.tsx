@@ -24,8 +24,12 @@ function ist(d: Date | null): string {
 export default function StatusPage() {
   return (
     <>
-      <h1 className="page-title">How the data is doing</h1>
-      <p className="lede">Where every number comes from, how fresh it is, and whether the scheduled jobs are running.</p>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Data status</h1>
+          <p className="page-sub">Where every number comes from, how fresh it is, and whether the scheduled jobs are running.</p>
+        </div>
+      </div>
       <Suspense fallback={<p className="muted">Checking…</p>}>
         <Status />
       </Suspense>
@@ -41,15 +45,15 @@ async function Status() {
 
   return (
     <div className="status-grid">
-      <section className="panel" aria-labelledby="live-title" style={{ marginTop: 0 }}>
-        <h2 id="live-title" style={{ fontSize: "var(--step-1)" }}>
+      <section className="card" aria-labelledby="live-title">
+        <h2 id="live-title" className="card-title" style={{ marginBottom: "var(--space-3)" }}>
           Live source check
         </h2>
         <SourceCheck />
       </section>
 
-      <section aria-labelledby="nav-title">
-        <h2 id="nav-title" style={{ fontSize: "var(--step-1)" }}>
+      <section className="card" aria-labelledby="nav-title">
+        <h2 id="nav-title" className="card-title" style={{ marginBottom: "var(--space-3)" }}>
           Latest NAV per fund
         </h2>
         <div className="table-scroll">
@@ -81,11 +85,11 @@ async function Status() {
         </p>
       </section>
 
-      <section aria-labelledby="bench-title">
-        <h2 id="bench-title" style={{ fontSize: "var(--step-1)" }}>
+      <section className="card" aria-labelledby="bench-title">
+        <h2 id="bench-title" className="card-title" style={{ marginBottom: "var(--space-3)" }}>
           Benchmarks used this week
         </h2>
-        <ul style={{ paddingLeft: "1.1em", display: "grid", gap: "var(--space-1)" }}>
+        <ul className="plain-list">
           {v.benchmarkUsage.map((b) => (
             <li key={b.shortName}>
               <strong>{b.shortName}</strong>: {b.label ?? "no benchmark, compared with similar funds"}
@@ -123,11 +127,11 @@ async function Status() {
         </div>
       </section>
 
-      <section aria-labelledby="ai-title">
-        <h2 id="ai-title" style={{ fontSize: "var(--step-1)" }}>
+      <section className="card" aria-labelledby="ai-title">
+        <h2 id="ai-title" className="card-title" style={{ marginBottom: "var(--space-3)" }}>
           News and Gemini
         </h2>
-        <ul style={{ paddingLeft: "1.1em", display: "grid", gap: "var(--space-1)" }}>
+        <ul className="plain-list">
           <li>News provider: {v.newsProvider ?? "not fetched yet"} ({v.headlineCount} headlines kept this week)</li>
           <li>Gemini model: {v.geminiModel}</li>
           {r && (
@@ -138,8 +142,8 @@ async function Status() {
         </ul>
       </section>
 
-      <section aria-labelledby="jobs-title">
-        <h2 id="jobs-title" style={{ fontSize: "var(--step-1)" }}>
+      <section className="card" aria-labelledby="jobs-title">
+        <h2 id="jobs-title" className="card-title" style={{ marginBottom: "var(--space-3)" }}>
           Recent job runs
         </h2>
         <div className="table-scroll">

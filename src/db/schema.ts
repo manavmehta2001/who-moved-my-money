@@ -36,6 +36,9 @@ export const funds = pgTable("funds", {
   benchmarkKey: text("benchmark_key").references(() => benchmarks.key),
   monthlySip: doublePrecision("monthly_sip"),
   unitsHeld: doublePrecision("units_held"),
+  investedAmount: doublePrecision("invested_amount"),
+  /** True when units/invested come from the sample SIP simulation rather than Meera's own numbers. */
+  holdingsSample: boolean("holdings_sample").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
   removedAt: timestamp("removed_at", { withTimezone: true }),

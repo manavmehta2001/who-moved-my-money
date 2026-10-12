@@ -2,30 +2,31 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { PasscodeForm } from "./PasscodeForm";
+import { useAdmin } from "./AdminProvider";
 
-type Phase = "idle" | "passcode" | "running" | "done" | "error";
+type Phase = "idle" | "running" | "done" | "error";
 
 /** "Generate this week's report now" — for demos; examiners shouldn't have to wait for Saturday. */
-export function GenerateNow({ isAdmin, label = "Generate this week's report now", quiet = false }: { isAdmin: boolean; label?: string; quiet?: boolean }) {
+export function GenerateNow({ label = "Refresh report", className = "button secondary small" }: { label?: string; className?: string }) {
   const router = useRouter();
+  const { adminFetch } = useAdmin();
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
 
   async function run() {
     setPhase("running");
-    setMessage("Fetching NAVs, comparing with similar funds and asking Gemini to write it up. This takes about half a minute.");
+    setMessage("Refreshing NAVs, comparing with the category and writing the analyst note…");
     try {
-      const res = await fetch("/api/admin/run-report", { method: "POST" });
+      const res = await adminFetch("/api/admin/run-report", { method: "POST" });
       const body = (await res.json().catch(() => ({}))) as { error?: string; verdict?: string; writtenBy?: string };
       if (res.status === 401) {
-        setPhase("passcode");
+        setPhase("idle");
         setMessage(null);
         return;
       }
       if (!res.ok) throw new Error(body.error ?? "Something went wrong.");
       setPhase("done");
-      setMessage(`Done: ${body.verdict}.${body.writtenBy === "template" ? " (Written without AI this week.)" : ""}`);
+      setMessage(`Updated: ${body.verdict}.${body.writtenBy === "template" ? " (Written without AI this week.)" : ""}`);
       router.refresh();
     } catch (e) {
       setPhase("error");
@@ -33,26 +34,18 @@ export function GenerateNow({ isAdmin, label = "Generate this week's report now"
     }
   }
 
-  if (phase === "passcode" || (!isAdmin && phase === "idle")) {
-    return phase === "passcode" ? (
-      <PasscodeForm intro="Generating a report needs the admin passcode." onSuccess={run} />
-    ) : (
-      <button type="button" className={quiet ? "button quiet" : "button"} onClick={() => setPhase("passcode")}>
-        {label}
-      </button>
-    );
-  }
-
   return (
-    <div className="form-row">
-      <div>
-        <button type="button" className={quiet ? "button quiet" : "button"} onClick={run} disabled={phase === "running"}>
-          {phase === "running" ? "Generating…" : label}
-        </button>
-      </div>
-      <p role="status" aria-live="polite" className={phase === "error" ? "alert" : "muted"}>
+    <span style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-2)" }}>
+      <button type="button" className={className} onClick={run} disabled={phase === "running"}>
+        <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M16.5 10a6.5 6.5 0 1 1-1.9-4.6" />
+          <path d="M16.5 3.5v3.6h-3.6" />
+        </svg>
+        {phase === "running" ? "Refreshing…" : label}
+      </button>
+      <span role="status" aria-live="polite" className={phase === "error" ? "alert" : "faint"}>
         {message}
-      </p>
-    </div>
+      </span>
+    </span>
   );
 }

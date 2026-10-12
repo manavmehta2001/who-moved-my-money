@@ -41,8 +41,8 @@ export function fundFlags(assetClass: AssetClass, history: WeekFacts[]): FundFla
           code: "debt_weekly_drop",
           reason:
             gap === null
-              ? `It fell ${pct(w)} this week, which is unusual for a short-duration debt fund and can mean trouble with a bond it holds.`
-              : `It fell ${pct(w)} this week, ${pp(gap)} more than similar debt funds, which can mean trouble with a bond it holds.`,
+              ? `Declined ${pct(w)} this week, an unusual move for a short-duration debt fund that may indicate credit stress in its holdings.`
+              : `Declined ${pct(w)} this week, ${pp(gap)} more than comparable debt funds, which may indicate credit stress in its holdings.`,
         });
       }
     }
@@ -54,8 +54,8 @@ export function fundFlags(assetClass: AssetClass, history: WeekFacts[]): FundFla
           code: "debt_monthly_negative",
           reason:
             gap === null
-              ? `It is down ${pct(m)} over the past month; funds like this normally edge up steadily.`
-              : `It is down ${pct(m)} over the past month, ${pp(gap)} worse than similar debt funds.`,
+              ? `Down ${pct(m)} over one month; short-duration debt funds typically accrue steadily.`
+              : `Down ${pct(m)} over one month, ${pp(gap)} behind comparable debt funds.`,
         });
       }
     }
@@ -70,12 +70,12 @@ export function fundFlags(assetClass: AssetClass, history: WeekFacts[]): FundFla
   if (known.length >= c.persistenceWindowWeeks && laggingWeeks >= c.persistentLagWeeks && gap1m !== null && gap1m < c.oneMonthGapVsCategory) {
     flags.push({
       code: "equity_persistent_lag",
-      reason: `It trailed similar funds in ${laggingWeeks} of the last ${known.length} weeks and is ${pp(gap1m)} behind them over the past month.`,
+      reason: `Underperformed its category in ${laggingWeeks} of the last ${known.length} weeks and trails it by ${pp(gap1m)} over one month.`,
     });
   }
   const gapYtd = latest.fundRetYtd !== null && latest.catRetYtd !== null && !latest.ytdFromInception ? latest.fundRetYtd - latest.catRetYtd : null;
   if (gapYtd !== null && gapYtd < c.ytdGapVsCategory) {
-    flags.push({ code: "equity_ytd_lag", reason: `This year it is ${pp(gapYtd)} behind similar funds.` });
+    flags.push({ code: "equity_ytd_lag", reason: `Trails its category average by ${pp(gapYtd)} year to date.` });
   }
   return flags;
 }
@@ -167,11 +167,11 @@ export function portfolioVerdict(funds: FundAssessment[], holdings: HoldingInput
     verdict = "Consider reviewing your allocation";
     const bits: string[] = [];
     if (flaggedFunds.length >= 2) {
-      bits.push(`${flaggedFunds.length} funds need a closer look.`);
+      bits.push(`${flaggedFunds.length} funds warrant review.`);
       for (const f of flaggedFunds) bits.push(`${f.name}: ${f.flags.map((x) => x.reason).join(" ")}`);
     }
     if (driftTriggered && drift.applicable) {
-      bits.push(`${drift.worstFund.name} is now ${pct(drift.worstFund.currentWeight, 1)} of your money, while your SIPs aim for ${pct(drift.worstFund.targetWeight, 1)}.`);
+      bits.push(`${drift.worstFund.name} now makes up ${pct(drift.worstFund.currentWeight, 1)} of the portfolio against a SIP-implied target of ${pct(drift.worstFund.targetWeight, 1)}.`);
     }
     reason = bits.join(" ");
   } else if (flaggedFunds.length === 1) {
@@ -180,7 +180,7 @@ export function portfolioVerdict(funds: FundAssessment[], holdings: HoldingInput
     reason = `${f.name}: ${f.flags.map((x) => x.reason).join(" ")}`;
   } else {
     verdict = "No action needed";
-    reason = "No fund has been behind similar funds week after week, and none showed a warning sign this week.";
+    reason = "No fund shows persistent underperformance against its category, and no fund triggered a risk flag this week.";
   }
   return { verdict, reason, flaggedFunds, drift, worry };
 }

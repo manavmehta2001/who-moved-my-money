@@ -1,60 +1,34 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { getCheckinView, type CheckinView } from "@/lib/data/views";
-import { isAdmin } from "@/lib/auth/passcode";
+import { getCheckinView } from "@/lib/data/views";
 import { formatDisplayDate } from "@/lib/dates";
 import { shareText } from "@/lib/share";
-import { GlossaryText } from "@/components/glossary/Glossary";
 import { GenerateNow } from "@/components/admin/GenerateNow";
-import { CheckinMotion } from "@/components/checkin/CheckinMotion";
-import { FundSection } from "@/components/checkin/FundSection";
-import { MarketStrip } from "@/components/checkin/MarketStrip";
-import { ShareButtons } from "@/components/checkin/ShareButtons";
-import { WorryDial } from "@/components/checkin/WorryDial";
+import { DashboardMotion } from "@/components/dashboard/DashboardMotion";
+import { AllocationCard, HoldingsCard, MarketCard, NoteCard, PortfolioCard, VerdictCard } from "@/components/dashboard/Cards";
+import { FundDetail } from "@/components/dashboard/FundDetail";
+import { Sheet } from "@/components/dashboard/Sheet";
 
-export default function CheckinPage(props: PageProps<"/">) {
+export default function DashboardPage(props: PageProps<"/">) {
   return (
-    <Suspense fallback={<p className="muted">Opening this Saturday&rsquo;s check-in…</p>}>
-      <Checkin searchParams={props.searchParams} />
+    <Suspense fallback={<p className="muted">Loading your portfolio…</p>}>
+      <Dashboard searchParams={props.searchParams} />
     </Suspense>
   );
 }
 
-function VerdictSentence({ view }: { view: CheckinView }) {
-  const v = view.report.verdict;
-  const watched = view.funds.filter((f) => f.flagged).map((f) => f.shortName);
-  return (
-    <h1 className="verdict-sentence" data-anim="verdict">
-      {v === "One fund worth watching" ? (
-        <>
-          <span className="verdict-phrase">{watched[0] ? `${v}:` : `${v}.`}</span>
-          {watched[0] ? ` ${watched[0]}.` : ""}
-        </>
-      ) : v === "No action needed" ? (
-        <>
-          <span className="verdict-phrase">{v}</span> this week.
-        </>
-      ) : (
-        <>
-          <span className="verdict-phrase">{v}</span> this week.
-        </>
-      )}
-    </h1>
-  );
-}
-
-async function Checkin({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
+async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   const { week } = await searchParams;
-  const [view, admin] = await Promise.all([getCheckinView(typeof week === "string" ? week : undefined), isAdmin()]);
+  const view = await getCheckinView(typeof week === "string" ? week : undefined);
 
   if (!view) {
     return (
-      <section className="empty" aria-labelledby="empty-title">
+      <section className="card empty" aria-labelledby="empty-title">
         <h1 id="empty-title" className="page-title">
-          Your first check-in arrives Saturday morning.
+          Your first weekly report arrives Saturday morning.
         </h1>
-        <p className="lede">Every Saturday at about 7 AM this page explains who moved your money: the market, funds like yours, or your fund itself. Can&rsquo;t wait?</p>
-        <GenerateNow isAdmin={admin} label="Generate it now" />
+        <p className="muted">Every Saturday at about 7 AM the dashboard explains what moved each fund: the market, its category, or the fund&rsquo;s own choices.</p>
+        <GenerateNow label="Generate it now" className="button" />
       </section>
     );
   }
@@ -63,62 +37,63 @@ async function Checkin({ searchParams }: { searchParams: PageProps<"/">["searchP
   const cited = new Set(view.funds.flatMap((f) => f.citedHeadlineIds));
 
   return (
-    <CheckinMotion state={view.state} week={r.weekEnding}>
-      <section className="hero" aria-labelledby="verdict">
+    <DashboardMotion state={view.state} week={r.weekEnding}>
+      <div className="page-head">
         <div>
-          <p className="hero-week">
-            Week ending Friday {formatDisplayDate(r.weekEnding)}
+          <h1 className="page-title">Portfolio</h1>
+          <p className="page-sub">
+            Weekly review for the week ending {formatDisplayDate(r.weekEnding)}
             {!view.isLatest && (
               <>
                 {" · "}
-                <Link href="/">See the latest week</Link>
+                <Link href="/">Go to latest</Link>
               </>
             )}
           </p>
-          <div id="verdict">
-            <VerdictSentence view={view} />
-          </div>
-          <p className="hero-headline">{r.content.headline}</p>
-          <p className="hero-reason">
-            <GlossaryText text={r.verdictReason} extraTerms={r.content.jargonUsed} skip={view.funds.map((f) => f.shortName)} />
-          </p>
-          <p style={{ marginTop: "var(--space-3)", display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-            {r.writtenBy === "gemini" ? <span className="badge">Written by Gemini from checked numbers</span> : <span className="badge">Written without AI this week</span>}
-          </p>
         </div>
-        <WorryDial score={r.worryScore} />
-      </section>
+        {view.isLatest && <GenerateNow />}
+      </div>
 
       {view.removedSince.length > 0 && (
-        <p className="alert info" style={{ marginTop: "var(--space-4)" }}>
-          Since this report, you removed {view.removedSince.join(", ")}. It won&rsquo;t appear in future check-ins.
+        <p className="alert info" style={{ marginBottom: "var(--gap)" }}>
+          Removed since this report: {view.removedSince.join(", ")}. It won&rsquo;t appear in future reports.
         </p>
       )}
 
-      <div className="funds">
-        {view.funds.map((f, i) => (
-          <FundSection key={f.schemeCode} f={f} jargon={r.content.jargonUsed} index={i} />
-        ))}
+      <div className="dash-grid">
+        <div className="dash-main">
+          {view.portfolio && <PortfolioCard p={view.portfolio} weekEnding={r.weekEnding} />}
+          <HoldingsCard funds={view.funds} />
+          <NoteCard view={view} shareText={shareText(view, process.env.NEXT_PUBLIC_APP_URL)} />
+        </div>
+        <div className="dash-side">
+          <VerdictCard view={view} />
+          {view.portfolio && <AllocationCard p={view.portfolio} />}
+          <MarketCard moves={view.indexMoves} headlines={view.headlines} cited={cited} provider={view.newsProvider} />
+        </div>
       </div>
 
-      <MarketStrip moves={view.indexMoves} headlines={view.headlines} cited={cited} provider={view.newsProvider} />
+      <p className="faint" style={{ marginTop: "var(--gap)" }}>
+        Generated {r.generatedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST ·{" "}
+        {r.writtenBy === "gemini" ? `analyst note by ${r.model}, fact-checked against the data` : "analyst note written without AI this week"}
+      </p>
 
-      <section aria-labelledby="share-title" style={{ marginTop: "var(--space-6)" }}>
-        <h2 id="share-title" style={{ fontSize: "var(--step-1)" }}>
-          Ask my CA friend
-        </h2>
-        <p className="muted prose">Instead of screenshotting NAVs, send this week&rsquo;s summary in one tap.</p>
-        <ShareButtons text={shareText(view, process.env.NEXT_PUBLIC_APP_URL)} />
-      </section>
-
-      {view.isLatest && (
-        <section aria-label="Refresh this report" style={{ marginTop: "var(--space-6)" }}>
-          <p className="faint" style={{ marginBottom: "var(--space-2)" }}>
-            Generated {r.generatedAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST.
-          </p>
-          <GenerateNow isAdmin={admin} label="Regenerate this week's report" quiet />
-        </section>
-      )}
-    </CheckinMotion>
+      {view.funds.map((f) => (
+        <Sheet
+          key={f.schemeCode}
+          id={f.schemeCode}
+          title={f.shortName}
+          subtitle={
+            <p className="faint" style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+              <span className="chip">{f.categoryLabel}</span>
+              {f.benchmarkLabel && <span className="chip">vs {f.benchmarkLabel}</span>}
+              {f.flagged && <span className="chip accent">Watch</span>}
+            </p>
+          }
+        >
+          <FundDetail f={f} jargon={r.content.jargonUsed} />
+        </Sheet>
+      ))}
+    </DashboardMotion>
   );
 }

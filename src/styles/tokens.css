@@ -1,142 +1,196 @@
 /*
  * Every colour, size and timing in the app lives here. Restyle by editing this file only.
- * Text colours are checked against WCAG AA on both surfaces; the verdict "ink" variants exist because
- * the pure accent colours (amber especially) are too light for small text.
+ * Fintech dashboard palette (light + dark). Text colours are checked against WCAG AA on their surfaces;
+ * gain/loss "ink" variants are the text-safe versions of the chart colours.
  */
 
 :root {
   color-scheme: light;
 
   /* Surfaces */
-  --bg: #eceeea;
-  --surface: #fafaf8;
-  --surface-sunk: #e2e5e0;
-  --rule: #c9cec6;
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #f7f8fb;
+  --surface-sunk: #eceff4;
+  --rule: #e2e6ee;
+  --rule-strong: #cfd5df;
+  --overlay: rgb(10 15 25 / 0.45);
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 2px 8px rgb(16 24 40 / 0.05);
+  --shadow-lg: -16px 0 48px rgb(16 24 40 / 0.18);
 
   /* Ink */
-  --ink: #1e2a3a;
-  --ink-soft: #46525f;
-  --ink-faint: #56616c;
+  --ink: #101828;
+  --ink-soft: #475467;
+  --ink-faint: #5d6b7e;
 
-  /* Verdict states: fill colour, text-safe "ink", and a quiet tint */
-  --calm: #2e7d5b;
-  --calm-ink: #236448;
-  --calm-tint: #dcebe3;
-  --watch: #c98a1b;
-  --watch-ink: #835607;
-  --watch-tint: #f3e6cc;
-  --review: #7a4e7a;
-  --review-ink: #6a426a;
-  --review-tint: #eadfea;
-  --neutral: #6b7682;
+  /* Brand */
+  --brand: #2c4bdc;
+  --brand-ink: #2443cf;
+  --brand-tint: #e9edfd;
+
+  /* Gains & losses (always paired with ▲/▼ and words) */
+  --gain: #079455;
+  --gain-ink: #067647;
+  --gain-tint: #e6f6ee;
+  --loss: #e5483b;
+  --loss-ink: #b42318;
+  --loss-tint: #fdecea;
+
+  /* Verdict states: fill, text-safe ink, tint */
+  --calm: #079455;
+  --calm-ink: #067647;
+  --calm-tint: #e6f6ee;
+  --watch: #dc8a08;
+  --watch-ink: #93590a;
+  --watch-tint: #fdf3e2;
+  --review: #7f56d9;
+  --review-ink: #6941c6;
+  --review-tint: #f1ecfc;
+  --neutral: #98a2b3;
 
   /* The page accent starts neutral; the load timeline eases it to the verdict state. */
   --accent: var(--neutral);
   --accent-ink: var(--ink-soft);
   --accent-tint: var(--surface-sunk);
 
-  /* "Who moved my money?" parts */
-  --part-market: #5b6f86;
-  --part-similar: #9aa7b4;
+  /* Chart series (allocation, waterfall) */
+  --s1: #2c4bdc;
+  --s2: #12b3a8;
+  --s3: #f59e0b;
+  --s4: #7f56d9;
+  --s5: #ef6820;
+  --s6: #0ba5ec;
+  --part-market: #5b7bd9;
+  --part-similar: #9db0e8;
   --part-choices: var(--accent);
-  --gain: #236448;
-  --loss: #8a3b2e;
 
   /* Type */
-  --font-display: var(--font-bricolage), "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-atkinson), "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
-  --step--1: clamp(0.84rem, 0.82rem + 0.1vw, 0.9rem);
-  --step-0: clamp(1rem, 0.97rem + 0.15vw, 1.08rem);
-  --step-1: clamp(1.18rem, 1.1rem + 0.35vw, 1.35rem);
-  --step-2: clamp(1.4rem, 1.25rem + 0.75vw, 1.85rem);
-  --step-3: clamp(1.75rem, 1.45rem + 1.5vw, 2.7rem);
-  --measure: 68ch;
+  --font-display: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --step--2: 0.75rem;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.0625rem;
+  --step-2: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  --step-3: clamp(1.6rem, 1.35rem + 1vw, 2.25rem);
+  --measure: 70ch;
 
   /* Space & shape */
   --gutter: 16px;
+  --gap: 16px;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.5rem;
-  --space-6: 2.25rem;
-  --space-7: 3.5rem;
-  --radius-s: 6px;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --radius-s: 8px;
   --radius-m: 12px;
-  --radius-l: 20px;
-  --page-max: 46rem;
+  --radius-l: 16px;
+  --page-max: 76rem;
 
-  /* Focus */
-  --focus: #1f5fbf;
-
-  /* Motion */
+  --focus: #2c4bdc;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur-quick: 160ms;
 }
 
 @media (min-width: 720px) {
   :root {
-    --gutter: 28px;
+    --gutter: 24px;
+    --gap: 20px;
   }
 }
 
-/* Dark: system preference unless the reader picked light explicitly… */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #141a22;
-    --surface: #1c242e;
-    --surface-sunk: #10151c;
-    --rule: #33404d;
-    --ink: #e6e9ec;
-    --ink-soft: #b4bdc6;
-    --ink-faint: #97a2ad;
-    --calm: #5cb88f;
-    --calm-ink: #7fcca8;
-    --calm-tint: #1d3329;
-    --watch: #e2a843;
-    --watch-ink: #ecc078;
-    --watch-tint: #3a2f1b;
-    --review: #b88ab8;
-    --review-ink: #d1aed1;
-    --review-tint: #33263a;
-    --neutral: #8a95a1;
-    --part-market: #8ea3bb;
-    --part-similar: #5d6a78;
-    --gain: #7fcca8;
-    --loss: #e8998b;
-    --focus: #8cb8ff;
+    --bg: #0b0f17;
+    --surface: #131a24;
+    --surface-2: #18202c;
+    --surface-sunk: #0f151e;
+    --rule: #222c3a;
+    --rule-strong: #2f3a4a;
+    --overlay: rgb(0 0 0 / 0.6);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-lg: -16px 0 48px rgb(0 0 0 / 0.5);
+    --ink: #f2f4f7;
+    --ink-soft: #b4bdca;
+    --ink-faint: #94a0b1;
+    --brand: #6f8cff;
+    --brand-ink: #8aa2ff;
+    --brand-tint: #1a2342;
+    --gain: #32d583;
+    --gain-ink: #47cd89;
+    --gain-tint: #0f2a1e;
+    --loss: #f97066;
+    --loss-ink: #fd8f86;
+    --loss-tint: #331617;
+    --calm: #32d583;
+    --calm-ink: #47cd89;
+    --calm-tint: #0f2a1e;
+    --watch: #fdb022;
+    --watch-ink: #fec84b;
+    --watch-tint: #2f2410;
+    --review: #9e77ed;
+    --review-ink: #b692f6;
+    --review-tint: #231a3a;
+    --neutral: #667085;
+    --s1: #6f8cff;
+    --s2: #2ed3c6;
+    --s3: #fdb022;
+    --s4: #9e77ed;
+    --s5: #fb7a3c;
+    --s6: #36bffa;
+    --part-market: #6f8cff;
+    --part-similar: #3d4f86;
+    --focus: #8aa2ff;
   }
 }
 
-/* …or picked dark explicitly with the toggle. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #141a22;
-  --surface: #1c242e;
-  --surface-sunk: #10151c;
-  --rule: #33404d;
-  --ink: #e6e9ec;
-  --ink-soft: #b4bdc6;
-  --ink-faint: #97a2ad;
-  --calm: #5cb88f;
-  --calm-ink: #7fcca8;
-  --calm-tint: #1d3329;
-  --watch: #e2a843;
-  --watch-ink: #ecc078;
-  --watch-tint: #3a2f1b;
-  --review: #b88ab8;
-  --review-ink: #d1aed1;
-  --review-tint: #33263a;
-  --neutral: #8a95a1;
-  --part-market: #8ea3bb;
-  --part-similar: #5d6a78;
-  --gain: #7fcca8;
-  --loss: #e8998b;
-  --focus: #8cb8ff;
+  --bg: #0b0f17;
+  --surface: #131a24;
+  --surface-2: #18202c;
+  --surface-sunk: #0f151e;
+  --rule: #222c3a;
+  --rule-strong: #2f3a4a;
+  --overlay: rgb(0 0 0 / 0.6);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-lg: -16px 0 48px rgb(0 0 0 / 0.5);
+  --ink: #f2f4f7;
+  --ink-soft: #b4bdca;
+  --ink-faint: #94a0b1;
+  --brand: #6f8cff;
+  --brand-ink: #8aa2ff;
+  --brand-tint: #1a2342;
+  --gain: #32d583;
+  --gain-ink: #47cd89;
+  --gain-tint: #0f2a1e;
+  --loss: #f97066;
+  --loss-ink: #fd8f86;
+  --loss-tint: #331617;
+  --calm: #32d583;
+  --calm-ink: #47cd89;
+  --calm-tint: #0f2a1e;
+  --watch: #fdb022;
+  --watch-ink: #fec84b;
+  --watch-tint: #2f2410;
+  --review: #9e77ed;
+  --review-ink: #b692f6;
+  --review-tint: #231a3a;
+  --neutral: #667085;
+  --s1: #6f8cff;
+  --s2: #2ed3c6;
+  --s3: #fdb022;
+  --s4: #9e77ed;
+  --s5: #fb7a3c;
+  --s6: #36bffa;
+  --part-market: #6f8cff;
+  --part-similar: #3d4f86;
+  --focus: #8aa2ff;
 }
 
-/* Final verdict states (also the instant state under reduced motion). */
 [data-verdict="calm"] {
   --accent: var(--calm);
   --accent-ink: var(--calm-ink);

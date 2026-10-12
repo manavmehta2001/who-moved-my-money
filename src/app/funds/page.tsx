@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFundsView } from "@/lib/data/views";
-import { isAdmin } from "@/lib/auth/passcode";
 import { FundsManager } from "@/components/funds/FundsManager";
 
-export const metadata: Metadata = { title: "My funds" };
+export const metadata: Metadata = { title: "Funds" };
 
 export default function FundsPage() {
   return (
     <>
-      <h1 className="page-title">My funds</h1>
-      <p className="lede">Add or remove a fund by its scheme code. Removing keeps its history, so you can add it back any time.</p>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Funds</h1>
+          <p className="page-sub">Add or remove funds by scheme code. Removing keeps the fund&rsquo;s history, so it can be added back any time.</p>
+        </div>
+      </div>
       <Suspense fallback={<p className="muted">Loading your funds…</p>}>
         <Funds />
       </Suspense>
@@ -19,10 +22,9 @@ export default function FundsPage() {
 }
 
 async function Funds() {
-  const [view, admin] = await Promise.all([getFundsView(), isAdmin()]);
+  const view = await getFundsView();
   return (
     <FundsManager
-      isAdmin={admin}
       benchmarks={view.benchmarks}
       removed={view.removed.map((r) => ({ schemeCode: r.schemeCode, name: r.name }))}
       initial={view.active.map((f) => ({
@@ -33,6 +35,8 @@ async function Funds() {
         lastNavDate: f.lastNavDate,
         monthlySip: f.monthlySip,
         unitsHeld: f.unitsHeld,
+        investedAmount: f.investedAmount,
+        holdingsSample: f.holdingsSample,
       }))}
     />
   );

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { gsap, MOTION_OK, useGSAP } from "@/lib/gsap";
-import { PasscodeForm } from "@/components/admin/PasscodeForm";
+import { useAdmin } from "@/components/admin/AdminProvider";
 import { Term } from "@/components/glossary/Glossary";
 
 export type FundRow = {
@@ -14,6 +14,8 @@ export type FundRow = {
   lastNavDate: string | null;
   monthlySip: number | null;
   unitsHeld: number | null;
+  investedAmount: number | null;
+  holdingsSample: boolean;
 };
 
 type Preview = {
@@ -31,19 +33,24 @@ type Preview = {
 };
 
 const NO_BENCHMARK = "__none__";
+const rupees = (x: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(x);
 
 function prettyDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
-export function FundsManager({ initial, removed, benchmarks, isAdmin }: { initial: FundRow[]; removed: Array<{ schemeCode: string; name: string }>; benchmarks: Array<{ key: string; label: string }>; isAdmin: boolean }) {
+const num = (v: string) => (v.trim() === "" ? null : Number(v));
+const invalidAmount = (v: string) => v.trim() !== "" && !(Number(v) > 0);
+
+export function FundsManager({ initial, removed, benchmarks }: { initial: FundRow[]; removed: Array<{ schemeCode: string; name: string }>; benchmarks: Array<{ key: string; label: string }> }) {
   const router = useRouter();
-  const [admin, setAdmin] = useState(isAdmin);
+  const { adminFetch } = useAdmin();
   const [removedLocally, setRemovedLocally] = useState<Set<string>>(() => new Set());
   const rows = initial.filter((r) => !removedLocally.has(r.schemeCode));
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<FundRow | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   // Responsive motion for user actions only: a new row slides in.
@@ -59,41 +66,38 @@ export function FundsManager({ initial, removed, benchmarks, isAdmin }: { initia
   async function remove(code: string, name: string) {
     if (!window.confirm(`Remove ${name}? Its history is kept and you can add it back later.`)) return;
     setListError(null);
-    const el = listRef.current?.querySelector<HTMLElement>(`[data-code="${code}"]`);
-    const res = await fetch(`/api/funds/${code}`, { method: "DELETE" });
-    if (res.status === 401) {
-      setAdmin(false);
-      return;
-    }
+    const res = await adminFetch(`/api/funds/${code}`, { method: "DELETE" });
+    if (res.status === 401) return;
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       setListError(body.error ?? "Couldn't remove that fund.");
       return;
     }
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-code="${code}"]`);
     const finish = () => {
       setRemovedLocally((prev) => new Set(prev).add(code));
       router.refresh();
     };
     // …and a removed row collapses.
-    if (el && window.matchMedia(MOTION_OK).matches) gsap.to(el, { height: 0, opacity: 0, paddingTop: 0, paddingBottom: 0, marginTop: 0, duration: 0.35, ease: "power2.inOut", onComplete: finish });
+    if (el && window.matchMedia(MOTION_OK).matches) gsap.to(el, { height: 0, opacity: 0, paddingTop: 0, paddingBottom: 0, duration: 0.35, ease: "power2.inOut", onComplete: finish });
     else finish();
   }
 
   return (
-    <>
-      <section aria-labelledby="list-title">
-        <h2 id="list-title" style={{ fontSize: "var(--step-2)" }}>
-          Your funds ({rows.length})
-        </h2>
+    <div className="funds-grid">
+      <section className="card" aria-labelledby="list-title">
+        <div className="card-head">
+          <h2 id="list-title" className="card-title">
+            Your funds <span className="faint">({rows.length})</span>
+          </h2>
+        </div>
         {listError && (
           <p className="alert" role="alert">
             {listError}
           </p>
         )}
         {rows.length === 0 ? (
-          <p className="muted" style={{ marginTop: "var(--space-3)" }}>
-            No funds yet. Add one below with its scheme code.
-          </p>
+          <p className="muted">No funds yet. Add one with its scheme code.</p>
         ) : (
           <ul className="fund-list" ref={listRef}>
             {rows.map((f) => (
@@ -101,27 +105,36 @@ export function FundsManager({ initial, removed, benchmarks, isAdmin }: { initia
                 <div>
                   <strong>{f.name}</strong>
                   <div className="meta">
-                    {f.schemeCode} · {f.categoryLabel} · <Term t="benchmark" />: {f.benchmarkLabel ?? "none, compared with similar funds"} · latest <Term t="NAV" /> {prettyDate(f.lastNavDate)}
-                    {f.monthlySip ? ` · SIP ₹${f.monthlySip.toLocaleString("en-IN")}/month` : ""}
+                    {f.schemeCode} · {f.categoryLabel} · <Term t="benchmark" />: {f.benchmarkLabel ?? "category average only"} · <Term t="NAV" /> {prettyDate(f.lastNavDate)}
+                  </div>
+                  <div className="meta">
+                    {f.monthlySip ? `SIP ${rupees(f.monthlySip)}/month` : "No SIP set"}
                     {f.unitsHeld ? ` · ${f.unitsHeld.toLocaleString("en-IN")} units` : ""}
+                    {f.investedAmount ? ` · ${rupees(f.investedAmount)} invested` : ""}
+                    {f.holdingsSample && <span className="chip brand" style={{ marginLeft: 6 }}>Sample</span>}
                   </div>
                 </div>
-                {admin && (
-                  <button type="button" className="button quiet" onClick={() => remove(f.schemeCode, f.name)} aria-label={`Remove ${f.name}`}>
+                <div className="row-actions">
+                  <button type="button" className="button quiet small" onClick={() => setEditing(f)} aria-label={`Edit holdings for ${f.name}`}>
+                    Edit
+                  </button>
+                  <button type="button" className="button quiet small" onClick={() => remove(f.schemeCode, f.name)} aria-label={`Remove ${f.name}`}>
                     Remove
                   </button>
-                )}
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <section className="panel" aria-labelledby="add-title">
-        <h2 id="add-title" style={{ fontSize: "var(--step-2)" }}>
-          Add a fund
-        </h2>
-        {admin ? (
+      <div style={{ display: "grid", gap: "var(--gap)", minWidth: 0 }}>
+        <section className="card" aria-labelledby="add-title">
+          <div className="card-head">
+            <h2 id="add-title" className="card-title">
+              Add a fund
+            </h2>
+          </div>
           <AddFundForm
             benchmarks={benchmarks}
             removed={removed}
@@ -129,20 +142,111 @@ export function FundsManager({ initial, removed, benchmarks, isAdmin }: { initia
               setJustAdded(code);
               router.refresh();
             }}
-            onUnauthorized={() => setAdmin(false)}
           />
-        ) : (
-          <PasscodeForm intro="Adding or removing funds needs the admin passcode. Viewing is open to everyone." onSuccess={() => setAdmin(true)} />
-        )}
-      </section>
+        </section>
+        <SchemeSearch />
+      </div>
 
-      <SchemeSearch />
-    </>
+      <EditHoldings
+        fund={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          router.refresh();
+        }}
+      />
+    </div>
   );
 }
 
-function AddFundForm({ benchmarks, removed, onAdded, onUnauthorized }: { benchmarks: Array<{ key: string; label: string }>; removed: Array<{ schemeCode: string; name: string }>; onAdded: (code: string) => void; onUnauthorized: () => void }) {
+function EditHoldings({ fund, onClose, onSaved }: { fund: FundRow | null; onClose: () => void; onSaved: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (fund && !d.open) d.showModal();
+    if (!fund && d.open) d.close();
+  }, [fund]);
+
+  return (
+    <dialog ref={ref} className="modal" aria-label={fund ? `Edit holdings for ${fund.name}` : "Edit holdings"} onClose={onClose}>
+      {fund && <EditHoldingsForm key={fund.schemeCode} fund={fund} onCancel={() => ref.current?.close()} onSaved={onSaved} />}
+    </dialog>
+  );
+}
+
+function EditHoldingsForm({ fund, onCancel, onSaved }: { fund: FundRow; onCancel: () => void; onSaved: () => void }) {
   const id = useId();
+  const { adminFetch } = useAdmin();
+  const [sip, setSip] = useState(() => (fund.monthlySip ? String(fund.monthlySip) : ""));
+  const [units, setUnits] = useState(() => (fund.unitsHeld ? String(fund.unitsHeld) : ""));
+  const [invested, setInvested] = useState(() => (fund.investedAmount ? String(fund.investedAmount) : ""));
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/funds/${fund.schemeCode}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ monthlySip: num(sip), unitsHeld: num(units), investedAmount: num(invested) }),
+      });
+      if (res.status === 401) return;
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(body.error ?? "Couldn't save.");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const bad = invalidAmount(sip) || invalidAmount(units) || invalidAmount(invested);
+
+  return (
+    <form onSubmit={save} className="form-row" noValidate>
+      <h2 className="card-title">Edit holdings</h2>
+      <p className="faint">{fund.name}</p>
+      <div className="field">
+        <label htmlFor={`${id}-sip`}>
+          Monthly <Term t="SIP" /> (₹)
+        </label>
+        <input id={`${id}-sip`} type="number" inputMode="decimal" min="1" step="any" value={sip} onChange={(e) => setSip(e.target.value)} aria-invalid={invalidAmount(sip) || undefined} />
+      </div>
+      <div className="field">
+        <label htmlFor={`${id}-units`}>Units held</label>
+        <input id={`${id}-units`} type="number" inputMode="decimal" min="0" step="any" value={units} onChange={(e) => setUnits(e.target.value)} aria-invalid={invalidAmount(units) || undefined} />
+      </div>
+      <div className="field">
+        <label htmlFor={`${id}-inv`}>Amount invested (₹)</label>
+        <input id={`${id}-inv`} type="number" inputMode="decimal" min="1" step="any" value={invested} onChange={(e) => setInvested(e.target.value)} aria-invalid={invalidAmount(invested) || undefined} />
+      </div>
+      {fund.holdingsSample && <p className="faint">These are sample numbers. Saving your own replaces them.</p>}
+      {error && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="modal-actions">
+        <button type="button" className="button quiet" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="button" disabled={busy || bad}>
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function AddFundForm({ benchmarks, removed, onAdded }: { benchmarks: Array<{ key: string; label: string }>; removed: Array<{ schemeCode: string; name: string }>; onAdded: (code: string) => void }) {
+  const id = useId();
+  const { adminFetch } = useAdmin();
   const [code, setCode] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [lookupState, setLookupState] = useState<"idle" | "loading" | "error">("idle");
@@ -151,6 +255,7 @@ function AddFundForm({ benchmarks, removed, onAdded, onUnauthorized }: { benchma
   const [benchmark, setBenchmark] = useState<string>("");
   const [sip, setSip] = useState("");
   const [units, setUnits] = useState("");
+  const [invested, setInvested] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -205,25 +310,22 @@ function AddFundForm({ benchmarks, removed, onAdded, onUnauthorized }: { benchma
     if (!preview || alreadyAdded) return;
     setSubmitting(true);
     setResult(null);
-    const num = (v: string) => (v.trim() === "" ? null : Number(v));
     try {
-      const res = await fetch("/api/funds", {
+      const res = await adminFetch("/api/funds", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ schemeCode: preview.schemeCode, benchmarkKey: benchmark === NO_BENCHMARK ? null : benchmark, monthlySip: num(sip), unitsHeld: num(units) }),
+        body: JSON.stringify({ schemeCode: preview.schemeCode, benchmarkKey: benchmark === NO_BENCHMARK ? null : benchmark, monthlySip: num(sip), unitsHeld: num(units), investedAmount: num(invested) }),
       });
+      if (res.status === 401) return;
       const body = (await res.json().catch(() => ({}))) as { error?: string; backfill?: { snapshotRows?: number } };
-      if (res.status === 401) {
-        onUnauthorized();
-        return;
-      }
       if (!res.ok) throw new Error(body.error ?? "Couldn't add that fund.");
-      setResult({ ok: true, text: `Added ${preview.name}. ${body.backfill?.snapshotRows ? `${body.backfill.snapshotRows} weeks of history are ready; it will appear in the next check-in.` : "Its history will be filled in on Saturday."}` });
+      setResult({ ok: true, text: `Added ${preview.name}. ${body.backfill?.snapshotRows ? `${body.backfill.snapshotRows} weeks of history are ready; it appears in the next report.` : "Its history will be filled in on Saturday."}` });
       onAdded(preview.schemeCode);
       setCode("");
       setPreview(null);
       setSip("");
       setUnits("");
+      setInvested("");
     } catch (err) {
       setResult({ ok: false, text: err instanceof Error ? err.message : "Couldn't add that fund." });
     } finally {
@@ -231,15 +333,14 @@ function AddFundForm({ benchmarks, removed, onAdded, onUnauthorized }: { benchma
     }
   }
 
-  const sipInvalid = sip.trim() !== "" && !(Number(sip) > 0);
-  const unitsInvalid = units.trim() !== "" && !(Number(units) > 0);
+  const bad = invalidAmount(sip) || invalidAmount(units) || invalidAmount(invested);
 
   return (
     <form onSubmit={submit} className="form-row" noValidate>
       <div className="field">
         <label htmlFor={`${id}-code`}>Scheme code</label>
         <span className="hint" id={`${id}-code-hint`}>
-          The number AMFI gives each fund plan. Don&rsquo;t know it? Use &ldquo;Find a scheme code&rdquo; below.
+          The AMFI number of the fund plan. Unsure? Use &ldquo;Find a scheme code&rdquo;.
         </span>
         <input
           id={`${id}-code`}
@@ -306,10 +407,10 @@ function AddFundForm({ benchmarks, removed, onAdded, onUnauthorized }: { benchma
         <>
           <div className="field">
             <label htmlFor={`${id}-bench`}>
-              Compare with (<Term t="benchmark" />)
+              <Term t="benchmark">Benchmark</Term>
             </label>
             <span className="hint" id={`${id}-bench-hint`}>
-              Suggested from its category: {preview.suggestedBenchmarkLabel ?? "no public benchmark, so similar funds only"}.
+              Suggested from its category: {preview.suggestedBenchmarkLabel ?? "none (no public benchmark), category average only"}.
             </span>
             <select id={`${id}-bench`} value={benchmark} onChange={(e) => setBenchmark(e.target.value)} aria-describedby={`${id}-bench-hint`}>
               {benchmarks.map((b) => (
@@ -318,32 +419,35 @@ function AddFundForm({ benchmarks, removed, onAdded, onUnauthorized }: { benchma
                   {b.key === preview.suggestedBenchmark ? " (suggested)" : ""}
                 </option>
               ))}
-              <option value={NO_BENCHMARK}>No benchmark: compare with similar funds only</option>
+              <option value={NO_BENCHMARK}>No benchmark: category average only</option>
             </select>
           </div>
-          <div className="form-row two">
+          <div className="form-row three">
             <div className="field">
               <label htmlFor={`${id}-sip`}>
-                Monthly <Term t="SIP" /> in ₹ (optional)
+                <Term t="SIP" />/month (₹)
               </label>
-              <input id={`${id}-sip`} type="number" inputMode="decimal" min="1" step="any" value={sip} onChange={(e) => setSip(e.target.value)} aria-invalid={sipInvalid || undefined} />
+              <input id={`${id}-sip`} type="number" inputMode="decimal" min="1" step="any" value={sip} onChange={(e) => setSip(e.target.value)} aria-invalid={invalidAmount(sip) || undefined} placeholder="Optional" />
             </div>
             <div className="field">
-              <label htmlFor={`${id}-units`}>Units held (optional)</label>
-              <input id={`${id}-units`} type="number" inputMode="decimal" min="0" step="any" value={units} onChange={(e) => setUnits(e.target.value)} aria-invalid={unitsInvalid || undefined} />
+              <label htmlFor={`${id}-units`}>Units held</label>
+              <input id={`${id}-units`} type="number" inputMode="decimal" min="0" step="any" value={units} onChange={(e) => setUnits(e.target.value)} aria-invalid={invalidAmount(units) || undefined} placeholder="Optional" />
+            </div>
+            <div className="field">
+              <label htmlFor={`${id}-inv`}>Invested (₹)</label>
+              <input id={`${id}-inv`} type="number" inputMode="decimal" min="1" step="any" value={invested} onChange={(e) => setInvested(e.target.value)} aria-invalid={invalidAmount(invested) || undefined} placeholder="Optional" />
             </div>
           </div>
-          <p className="faint">With SIP amounts and units for every fund, the check-in also tells you if your money has drifted away from the split your SIPs aim for.</p>
           <div>
-            <button className="button" type="submit" disabled={submitting || sipInvalid || unitsInvalid}>
-              {submitting ? "Adding and fetching its history…" : "Add fund"}
+            <button className="button" type="submit" disabled={submitting || bad}>
+              {submitting ? "Adding and fetching history…" : "Add fund"}
             </button>
           </div>
         </>
       )}
 
       {result && (
-        <p className={result.ok ? "alert info" : "alert"} role={result.ok ? "status" : "alert"}>
+        <p className={result.ok ? "alert ok" : "alert"} role={result.ok ? "status" : "alert"}>
           {result.text}
         </p>
       )}
@@ -370,8 +474,8 @@ function SchemeSearch() {
       const res = await fetch(`/api/funds/lookup?q=${encodeURIComponent(q.trim())}`);
       const body = (await res.json()) as { results?: Array<{ schemeCode: string; schemeName: string }>; error?: string };
       if (!res.ok) throw new Error(body.error ?? "Search failed.");
-      setResults(body.results ?? []);
-      setMessage(body.results?.length ? `${body.results.length} matches. Pick the "Direct Plan - Growth" one if you can.` : "No matches. Try fewer words, like the fund house and type.");
+      setResults((body.results ?? []).slice(0, 8));
+      setMessage(body.results?.length ? `${body.results.length} matches. Prefer the "Direct Plan - Growth" one.` : "No matches. Try fewer words.");
       setState("idle");
     } catch (err) {
       setState("error");
@@ -382,29 +486,29 @@ function SchemeSearch() {
   async function copy(code: string) {
     try {
       await navigator.clipboard.writeText(code);
-      setMessage(`Copied ${code}. Paste it into the scheme code box above.`);
+      setMessage(`Copied ${code}. Paste it into the scheme code box.`);
     } catch {
       setMessage(`The code is ${code}.`);
     }
   }
 
   return (
-    <section className="panel" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} style={{ fontSize: "var(--step-1)" }}>
-        Find a scheme code
-      </h2>
-      <form onSubmit={search} className="form-row" role="search">
-        <div className="field">
-          <label htmlFor={`${id}-q`}>Fund name</label>
-          <input id={`${id}-q`} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. Parag Parikh Flexi Cap Direct" />
-        </div>
-        <div>
-          <button className="button secondary" type="submit" disabled={state === "loading"}>
-            {state === "loading" ? "Searching…" : "Search"}
-          </button>
-        </div>
+    <section className="card" aria-labelledby={`${id}-title`}>
+      <div className="card-head">
+        <h2 id={`${id}-title`} className="card-title">
+          Find a scheme code
+        </h2>
+      </div>
+      <form onSubmit={search} role="search" style={{ display: "flex", gap: "var(--space-2)" }}>
+        <label htmlFor={`${id}-q`} className="sr-only">
+          Fund name
+        </label>
+        <input id={`${id}-q`} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. Parag Parikh Flexi Cap" />
+        <button className="button secondary" type="submit" disabled={state === "loading"}>
+          {state === "loading" ? "Searching…" : "Search"}
+        </button>
       </form>
-      <p role="status" aria-live="polite" className={state === "error" ? "alert" : "faint"}>
+      <p role="status" aria-live="polite" className={state === "error" ? "alert" : "faint"} style={{ marginTop: "var(--space-2)" }}>
         {message}
       </p>
       {results.length > 0 && (
@@ -412,10 +516,7 @@ function SchemeSearch() {
           {results.map((r) => (
             <li key={r.schemeCode}>
               <button type="button" onClick={() => copy(r.schemeCode)}>
-                <span className="num">
-                  <strong>{r.schemeCode}</strong>
-                </span>{" "}
-                {r.schemeName}
+                <strong className="num">{r.schemeCode}</strong> {r.schemeName}
               </button>
             </li>
           ))}
