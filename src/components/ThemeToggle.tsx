@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
 type Choice = "system" | "light" | "dark";
 const KEY = "wmm-theme";
 const NEXT: Record<Choice, Choice> = { system: "light", light: "dark", dark: "system" };
-const LABEL: Record<Choice, string> = { system: "Theme: automatic", light: "Theme: light", dark: "Theme: dark" };
+const SHORT: Record<Choice, string> = { system: "Auto", light: "Light", dark: "Dark" };
 
 /** Runs before paint (inlined in <head>) so the chosen theme never flashes. */
 export const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem("${KEY}");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
@@ -48,12 +48,12 @@ export function ThemeToggle() {
   }
 
   return (
-    <button type="button" className="icon-button" onClick={cycle} aria-label={`${LABEL[choice]}. Change theme`}>
+    <button type="button" className="icon-button" onClick={cycle} aria-label={`${SHORT[choice]} theme. Change theme`}>
       <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
         <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
         <path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor" />
       </svg>
-      <span className="theme-label">{choice === "system" ? "Auto" : choice === "light" ? "Light" : "Dark"}</span>
+      <span className="theme-label">{SHORT[choice]}</span>
     </button>
   );
 }
