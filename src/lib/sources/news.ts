@@ -151,7 +151,8 @@ const RELEVANCE: Array<[RegExp, number]> = [
 const NOISE = /\b(horoscope|cricket|bollywood|recipe|stocks to buy|buy or sell|top picks|multibagger|target price)\b/i;
 
 // The product deliberately carries no weather content, so weather-driven headlines are dropped before Gemini sees them.
-export const WEATHER_WORDS = /\b(weather|monsoons?|rain(s|fall|y)?|cyclones?|storms?|floods?|drought|heat ?waves?|imd|el ni[nñ]o|la ni[nñ]a|forecast|sunny|cloud(s|y)?|thunder\w*|snow\w*|sky|skies)\b/i;
+export const WEATHER_WORDS =
+  /\b(weather\w*|monsoon\w*|rain(s|y|fall|ing|ed)?|cyclon\w*|storm\w*|flood\w*|drought\w*|heat ?waves?|imd|el ni[nñ]o|la ni[nñ]a|forecast\w*|sunny|sunshine|cloud\w*|thunder\w*|snow\w*|sky|skies|wind(y|s)?|fog\w*|hail\w*|breez\w*|climat\w*|tornado\w*|hurricane\w*|typhoon\w*)\b/i;
 
 function words(title: string): Set<string> {
   return new Set(title.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 2));
